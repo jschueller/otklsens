@@ -1,6 +1,9 @@
+.. image:: https://github.com/openturns/otklsens/actions/workflows/build.yml/badge.svg?branch=master
+    :target: https://github.com/openturns/otklsens/actions/workflows/build.yml
+
 otklsens
 ========
 
 Run tests::
 
-    PYTHONPATH=$PWD/../schueller/build/install/lib/python3.8/site-packages/:$PWD pytest-3 test/
+    PYTHONPATH=$PWD pytest-3 test/ -s
