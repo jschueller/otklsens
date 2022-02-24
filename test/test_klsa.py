@@ -1,4 +1,4 @@
-from openturns import *
+import openturns as ot
 from otklsens import KarhunenLoeveSensitivityAnalysis
 from math import *
 from time import time
@@ -16,7 +16,7 @@ def footer(t0):
 def test_klsa_big():
     t00 = time()
     # Verbosity
-    Log.Show(Log.INFO)
+    ot.Log.Show(ot.Log.INFO)
     #Log.Show(Log.NONE)
 
     #############################################
@@ -27,7 +27,7 @@ def test_klsa_big():
     # Time grid parameters
     T = 3.0
     NT = 256
-    tg = RegularGrid(0.0, T / NT, NT)
+    tg = ot.RegularGrid(0.0, T / NT, NT)
 
     # Toy function to link input processes to the output process
     in_dim = 4
@@ -35,12 +35,12 @@ def test_klsa_big():
     spatial_dim = 1
 
     def myPyFunc(X):
-        values = Sample(X)
-        f = SymbolicFunction(["x1", "x2", "x3", "x4"], ["x1 + x2 + x3 - x4 + x1 * x2 - x3 * x4 - 0.1 * x1 * x2 * x3"])
+        values = ot.Sample(X)
+        f = ot.SymbolicFunction(["x1", "x2", "x3", "x4"], ["x1 + x2 + x3 - x4 + x1 * x2 - x3 * x4 - 0.1 * x1 * x2 * x3"])
         Y = f(values)
         return Y
 
-    myFunc = PythonFieldFunction(tg, in_dim, tg, out_dim, myPyFunc)
+    myFunc = ot.PythonFieldFunction(tg, in_dim, tg, out_dim, myPyFunc)
 
     footer(t0)
     ##################################################################
@@ -50,29 +50,29 @@ def test_klsa_big():
 
     # First process: white noise around a bumpy trend
     # The bumpy trend
-    refData = CompositeProcess(TrendTransform(SymbolicFunction("t", "sin(20*t)"), tg), RandomWalk([0.0], Uniform(-0.2, 0.1), tg)).getRealization()
+    refData = ot.CompositeProcess(ot.TrendTransform(ot.SymbolicFunction("t", "sin(20*t)"), tg), ot.RandomWalk([0.0], ot.Uniform(-0.2, 0.1), tg)).getRealization()
     vertices = refData.getMesh().getVertices()
     values = refData.getValues()
 
-    refCurve = DatabaseFunction(vertices, values)
-    refCurve = PiecewiseLinearEvaluation([vertices[i, 0] for i in range(vertices.getSize())], values)
+    refCurve = ot.DatabaseFunction(vertices, values)
+    refCurve = ot.PiecewiseLinearEvaluation([vertices[i, 0] for i in range(vertices.getSize())], values)
     # The first process
-    firstProcess = CompositeProcess(TrendTransform(refCurve, tg), WhiteNoise(Normal(0.0, 0.05), tg))
+    firstProcess = ot.CompositeProcess(ot.TrendTransform(refCurve, tg), ot.WhiteNoise(ot.Normal(0.0, 0.05), tg))
     firstProcess.setTimeGrid(tg)
 
     # Second process: smooth Gaussian process
-    secondProcess = GaussianProcess(SquaredExponential([1.0], [T / 4.0]), tg)
+    secondProcess = ot.GaussianProcess(ot.SquaredExponential([1.0], [T / 4.0]), tg)
 
     # Third process: elementary process based on a bivariate random vector
-    randomParameters = ComposedDistribution([Uniform(), Normal()])
-    thirdProcess = FunctionalBasisProcess(randomParameters, Basis([SymbolicFunction(["t"], ["1", "0"]), SymbolicFunction(["t"], ["0", "1"])]))
+    randomParameters = ot.ComposedDistribution([ot.Uniform(), ot.Normal()])
+    thirdProcess = ot.FunctionalBasisProcess(randomParameters, ot.Basis([ot.SymbolicFunction(["t"], ["1", "0"]), ot.SymbolicFunction(["t"], ["0", "1"])]))
 
     # Here we aggregate all the input processes
-    processCollection = ProcessCollection(0)
+    processCollection = ot.ProcessCollection(0)
     processCollection.add(firstProcess)
     processCollection.add(secondProcess)
     processCollection.add(thirdProcess)
-    X = AggregatedProcess(processCollection)
+    X = ot.AggregatedProcess(processCollection)
     X.setMesh(tg)
 
     footer(t0)
@@ -99,12 +99,12 @@ def test_klsa_big():
     input_KL_threshold  = 1.0e-3
     output_KL_threshold = 1.0e-3
     # Marginal distribution factories to use for the KL coefficients of the input process. Give one factory for each marginal input process, it will be used for all the coefficients of the KL expansion of the marginal input process
-    input_coefficients_factories = [NormalFactory(), NormalFactory(), ExponentialFactory(), NormalFactory()]
+    input_coefficients_factories = [ot.NormalFactory(), ot.NormalFactory(), ot.ExponentialFactory(), ot.NormalFactory()]
     # Numerical parameters for the polynomial chaos expansion (PCE)
     # Numerical method to use for the least-squares approximation. Cholesky is the fastest, SVD the most robust
-    ResourceMap.SetAsString("LeastSquaresMetaModelSelection-DecompositionMethod", "Cholesky")
+    ot.ResourceMap.SetAsString("LeastSquaresMetaModelSelection-DecompositionMethod", "Cholesky")
     # Early exit based on cross-validation error increase
-    ResourceMap.SetAsScalar("LeastSquaresMetaModelSelection-MaximumErrorFactor", 1.2)
+    ot.ResourceMap.SetAsScalar("LeastSquaresMetaModelSelection-MaximumErrorFactor", 1.2)
     # Functional basis size.
     basisSize = 1000
     # Use sparse expansion?
@@ -163,11 +163,11 @@ def test_klsa_big():
     for i in range(size):
         basis = inputEKLResult.getMarginalBasis(i)
         N = basis.getSize()
-        palette = Drawable.BuildDefaultPalette(N)
-        graph = Graph("KL modes input " + str(i), "t", "phi", True, "topright")
+        palette = ot.Drawable.BuildDefaultPalette(N)
+        graph = ot.Graph("KL modes input " + str(i), "t", "phi", True, "topright")
         variances = inputEKLResult.getMarginalVariances(i)
         for j in range(N):
-            curveJ = (basis[j] * SymbolicFunction("x", str(sqrt(variances[j])))).draw(tg.getStart(), tg.getEnd()).getDrawable(0)
+            curveJ = (basis[j] * ot.SymbolicFunction("x", str(sqrt(variances[j])))).draw(tg.getStart(), tg.getEnd()).getDrawable(0)
             curveJ.setLegend("KL " + str(j))
             curveJ.setColor(palette[j])
             graph.add(curveJ)
@@ -185,11 +185,11 @@ def test_klsa_big():
     for i in range(size):
         basis = outputEKLResult.getMarginalBasis(i)
         N = basis.getSize()
-        palette = Drawable.BuildDefaultPalette(N)
-        graph = Graph("KL modes output " + str(i), "t", "phi", True, "topright")
+        palette = ot.Drawable.BuildDefaultPalette(N)
+        graph = ot.Graph("KL modes output " + str(i), "t", "phi", True, "topright")
         variances = inputEKLResult.getMarginalVariances(i)
         for j in range(N):
-            curveJ = (basis[j] * SymbolicFunction("x", str(sqrt(variances[j])))).draw(tg.getStart(), tg.getEnd()).getDrawable(0)
+            curveJ = (basis[j] * ot.SymbolicFunction("x", str(sqrt(variances[j])))).draw(tg.getStart(), tg.getEnd()).getDrawable(0)
             curveJ.setLegend("KL " + str(j))
             curveJ.setColor(palette[j])
             graph.add(curveJ)

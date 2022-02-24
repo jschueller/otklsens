@@ -1,4 +1,4 @@
-from openturns import *
+import openturns as ot
 from .EmpiricalKarhunenLoeveResult import *
 from numpy import *
 from time import *
@@ -25,9 +25,9 @@ class EmpiricalKarhunenLoeveAlgorithm:
         mesh = self.processSample_.getMesh()
         nbFields = self.processSample_.getSize()
         nbVertices = mesh.getVerticesNumber()
-        M = Matrix(nbVertices, nbFields)
+        M = ot.Matrix(nbVertices, nbFields)
         for d in range(dimension):
-            marginalMean.append(Field(mesh, meanValues.getMarginal(d)))
+            marginalMean.append(ot.Field(mesh, meanValues.getMarginal(d)))
             # Then we use SVD decomposition to get a sample of \xi and the
             # functions \phi_k
             # Build the matrix
@@ -49,19 +49,19 @@ class EmpiricalKarhunenLoeveAlgorithm:
                 lamb, ev = M.computeGram(False).computeEV()
                 nbColumns = ev.getNbColumns()
                 # We must sort the eigenvalues and the associated eigenvectors in descending order
-                eigen_pairs = Sample(nbColumns, nbColumns + 1)
+                eigen_pairs = ot.Sample(nbColumns, nbColumns + 1)
                 for i in range(nbColumns):
                     for j in range(nbColumns):
                         eigen_pairs[i, j] = ev[i, j]
                     eigen_pairs[i, nbColumns] = -lamb[i]
                 eigen_pairs = eigen_pairs.sortAccordingToAComponent(nbColumns)
-                U = SquareMatrix(nbColumns)
+                U = ot.SquareMatrix(nbColumns)
                 for i in range(nbColumns):
                     for j in range(nbColumns):
                         U[i, j] = eigen_pairs[i, j]
                     lamb[i] = -eigen_pairs[i, nbColumns]
                 print("lamb=", lamb)
-                sigma = Point([sqrt(max(0.0, lamb[i])) for i in range(nbColumns)])
+                sigma = ot.Point([sqrt(max(0.0, lamb[i])) for i in range(nbColumns)])
                 t1 = time()
             ## print "EV=", t1 - t0, "s"
             ## print "lamb=", lamb, "ev=\n", ev
@@ -72,17 +72,17 @@ class EmpiricalKarhunenLoeveAlgorithm:
             ## print "VT=", VT.getNbRows(), "x", VT.getNbColumns()
             ## print "nbVertices=", nbVertices
             ## print "sigma=", sigma, "alpha=", alpha
-            marginalVariances.append(Point([sigma[i]**2 for i in range(sigma.getDimension())]))
+            marginalVariances.append(ot.Point([sigma[i]**2 for i in range(sigma.getDimension())]))
             # Compute the coefficients
             coeffs = M.transpose() * U
-            marginalCoefficients.append(Sample(array(coeffs)))
-            basis = ProcessSample(mesh, 0, 1)
+            marginalCoefficients.append(ot.Sample(array(coeffs)))
+            basis = ot.ProcessSample(mesh, 0, 1)
             # Extract the discretized basis functions
             for i in range(nbColumns):
                 # Store the basis function
                 col = U[:, i]
-                values = Sample(array(col))
-                basis.add(Field(mesh, values))
+                values = ot.Sample(array(col))
+                basis.add(ot.Field(mesh, values))
             marginalBasis.append(basis)
         self.result_ = EmpiricalKarhunenLoeveResult(marginalMean, marginalBasis, marginalCoefficients, marginalVariances)
 

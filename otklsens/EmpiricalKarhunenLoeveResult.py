@@ -1,4 +1,4 @@
-from openturns import *
+import openturns as ot
 
 class EmpiricalKarhunenLoeveResult:
     def __init__(self, marginalEmpiricalMean = list(), marginalEmpiricalBasis = list(), marginalCoefficients = list(), marginalVariances = list()):
@@ -26,21 +26,21 @@ class EmpiricalKarhunenLoeveResult:
         field = self.getMarginalEmpiricalMean(i)
         if field.getInputDimension() == 1:
             nbVertices = field.getMesh().getVerticesNumber()
-            locations = Point([field.getMesh().getVertices()[i, 0] for i in range(nbVertices)])
-            return Function(PiecewiseLinearEvaluation(locations, field.getValues()))
-        return Function(field.getMesh().getVertices(), field.getValues())
+            locations = [field.getMesh().getVertices()[i, 0] for i in range(nbVertices)]
+            return ot.Function(ot.PiecewiseLinearEvaluation(locations, field.getValues()))
+        return ot.Function(field.getMesh().getVertices(), field.getValues())
 
     def getMarginalBasis(self, i):
         processSample = self.getMarginalEmpiricalBasis(i)
         nbVertices = processSample.getMesh().getVerticesNumber()
-        locations = Point([processSample.getMesh().getVertices()[i, 0] for i in range(nbVertices)])
+        locations = [processSample.getMesh().getVertices()[i, 0] for i in range(nbVertices)]
         size = processSample.getSize()
-        coll = FunctionCollection(size)
+        coll = ot.FunctionCollection(size)
         for i in range(size):
             values = processSample[i]
             if processSample.getMesh().getDimension() == 1:
-                coll[i] = Function(PiecewiseLinearEvaluation(locations, values))
+                coll[i] = ot.Function(ot.PiecewiseLinearEvaluation(locations, values))
             else:
-                coll[i] = Function(processSample.getMesh().getVertices(), values)
+                coll[i] = ot.Function(processSample.getMesh().getVertices(), values)
         return coll
         

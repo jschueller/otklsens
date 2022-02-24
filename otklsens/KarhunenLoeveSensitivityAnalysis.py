@@ -1,4 +1,4 @@
-from openturns import *
+import openturns as ot
 from .EmpiricalKarhunenLoeveAlgorithm import *
 from .EmpiricalKarhunenLoeveResult import *
 
@@ -9,21 +9,21 @@ class KarhunenLoeveSensitivityAnalysis:
         self.inputEpsilon_ = inputEpsilon
         self.outputEpsilon_ = outputEpsilon
         if len(factories) == 0:
-            self.factories_ = [HistogramFactory()]*inputProcessSample.getDimension()
+            self.factories_ = [ot.HistogramFactory()]*inputProcessSample.getDimension()
         else:
             self.factories_ = factories
         self.basisSize_ = basisSize
-        self.marginalInputSizes_ = Indices()
-        self.marginalOutputSizes_ = Indices()
+        self.marginalInputSizes_ = ot.Indices()
+        self.marginalOutputSizes_ = ot.Indices()
         self.sparse_ = sparse
         self.anisotropic_ = anisotropic
         self.inputEKLResult_ = EmpiricalKarhunenLoeveResult()
         self.outputEKLResult_ = EmpiricalKarhunenLoeveResult()
-        self.marginalInputSizes_ = Indices()
-        self.marginalOutputSizes_ = Indices()
-        self.pceResult_ = FunctionalChaosResult()
-        self.allInputVariances_ = Point()
-        self.allOutputVariances_ = Point()
+        self.marginalInputSizes_ = ot.Indices()
+        self.marginalOutputSizes_ = ot.Indices()
+        self.pceResult_ = ot.FunctionalChaosResult()
+        self.allInputVariances_ = ot.Point()
+        self.allOutputVariances_ = ot.Point()
 
     def findSignificantComponents(self, values, epsilon):
         dimension = values.getDimension()
@@ -31,18 +31,18 @@ class KarhunenLoeveSensitivityAnalysis:
         # Can do better with bisection search...
         for i in range(dimension):
             if (values[i] <= small):
-                indices = Indices(i)
+                indices = ot.Indices(i)
                 indices.fill()
                 return indices
-        indices = Indices(dimension)
+        indices = ot.Indices(dimension)
         indices.fill()
         return indices
 
     def aggregateCoefficients(self, eklResult, epsilon):
         # Extract the significant components
-        fullSample = Sample(eklResult.getMarginalCoefficients(0).getSize(), 0)
-        allSize = Indices()
-        allVariances = Point()
+        fullSample = ot.Sample(eklResult.getMarginalCoefficients(0).getSize(), 0)
+        allSize = ot.Indices()
+        allVariances = ot.Point()
         last = 0
         dimension = eklResult.getSize()
         for i in range(dimension):
@@ -51,7 +51,7 @@ class KarhunenLoeveSensitivityAnalysis:
             fullSample.stack(eklResult.getMarginalCoefficients(i).getMarginal(indices))
             last += indices.getSize()
             allSize.add(last)
-            allVariances.add(Point([variances[i] for i in indices]))
+            allVariances.add(ot.Point([variances[i] for i in indices]))
         return fullSample, allSize, allVariances
 
     def computePCE(self, inSample, outSample):
@@ -59,12 +59,12 @@ class KarhunenLoeveSensitivityAnalysis:
         dimension = inSample.getDimension()
         j0 = 0
         # For the weights of the enumerate function
-        weights = Point(0)
+        weights = ot.Point(0)
         allInputVariances = self.allInputVariances_
         # For the input distribution
-        coll = DistributionCollection(0)
+        coll = ot.DistributionCollection(0)
         # For the orthogonal basis
-        polyColl = PolynomialFamilyCollection(0)
+        polyColl = ot.PolynomialFamilyCollection(0)
         index = 0
         for i in range(self.marginalInputSizes_.getSize()):
             j1 = self.marginalInputSizes_[i]
@@ -74,29 +74,29 @@ class KarhunenLoeveSensitivityAnalysis:
                 weights.add(sqrt(sigma0 / allInputVariances[j]))
                 marginalDistribution = self.factories_[i].build(inSample.getMarginal(index))
                 coll.add(marginalDistribution)
-                polyColl.add(StandardDistributionPolynomialFactory(marginalDistribution))
+                polyColl.add(ot.StandardDistributionPolynomialFactory(marginalDistribution))
                 index += 1
             j0 = j1
         # Build the distribution
-        distribution = ComposedDistribution(coll)
+        distribution = ot.ComposedDistribution(coll)
         # Build the enumerate function
         if self.anisotropic_:
-            enumerateFunction = HyperbolicAnisotropicEnumerateFunction(weights, 1.0)
+            enumerateFunction = ot.HyperbolicAnisotropicEnumerateFunction(weights, 1.0)
         else:
-            enumerateFunction = LinearEnumerateFunction(dimension)
+            enumerateFunction = ot.LinearEnumerateFunction(dimension)
         # Build the basis
-        productBasis = OrthogonalProductPolynomialFactory(
+        productBasis = ot.OrthogonalProductPolynomialFactory(
             polyColl, enumerateFunction)
         print("distribution dimension=", distribution.getDimension())
         print("enumerate dimension=", enumerateFunction.getDimension())
         print("basis size=", polyColl.getSize())
         # run algorithm
-        adaptiveStrategy = FixedStrategy(productBasis, self.basisSize_)
+        adaptiveStrategy = ot.FixedStrategy(productBasis, self.basisSize_)
         if self.sparse_:
-            projectionStrategy = LeastSquaresStrategy(LeastSquaresMetaModelSelectionFactory(LARS(), CorrectedLeaveOneOut()))
+            projectionStrategy = ot.LeastSquaresStrategy(ot.LeastSquaresMetaModelSelectionFactory(ot.LARS(), ot.CorrectedLeaveOneOut()))
         else:
-            projectionStrategy = LeastSquaresStrategy()
-        algo = FunctionalChaosAlgorithm(
+            projectionStrategy = ot.LeastSquaresStrategy()
+        algo = ot.FunctionalChaosAlgorithm(
             inSample, outSample, distribution, adaptiveStrategy, projectionStrategy)
         algo.run()
         return algo.getResult()
@@ -189,10 +189,10 @@ class KarhunenLoeveSensitivityAnalysis:
             startOutput = self.marginalOutputSizes_[j - 1]
         stopOutput = self.marginalOutputSizes_[j]
         N = stopOutput - startOutput
-        variances = Sample(N, 1)
+        variances = ot.Sample(N, 1)
         coefficientIndices = self.pceResult_.getIndices()
         inputDimension = self.marginalInputSizes_.getSize()
-        conditionalVariances = Sample(N, inputDimension)
+        conditionalVariances = ot.Sample(N, inputDimension)
         # Now, select the relevant coefficients
         coefficients = self.pceResult_.getCoefficients()
         size = coefficients.getSize()
@@ -232,20 +232,20 @@ class KarhunenLoeveSensitivityAnalysis:
                             conditionalVariances[outputIndex, inputIndex] += k2
         conditionalVariances.exportToCSVFile("ConditionalVariances.csv")
         variances.exportToCSVFile("Variances.csv")
-        graph = Graph("Variance decomposition of output " + str(j), "KL mode", "variance", True, "topright")
-        palette = Drawable.BuildDefaultPalette(inputDimension + 1)
-        lastSensitivities = Point(inputDimension + 1)
+        graph = ot.Graph("Variance decomposition of output " + str(j), "KL mode", "variance", True, "topright")
+        palette = ot.Drawable.BuildDefaultPalette(inputDimension + 1)
+        lastSensitivities = ot.Point(inputDimension + 1)
         for outputIndex in range(N):
             y0 = 0.0
             for inputIndex in range(inputDimension):
                 y1 = y0 + conditionalVariances[outputIndex, inputIndex]
-                curve = Curve([[outputIndex, y0], [outputIndex, y1]])
+                curve = ot.Curve([[outputIndex, y0], [outputIndex, y1]])
                 curve.setColor(palette[inputIndex])
                 curve.setLineWidth(3)
                 if outputIndex == 0:
                     curve.setLegend("KL cond. var. " + str(inputIndex))
                 else:
-                    line = Curve([[outputIndex - 1, lastSensitivities[inputIndex]], [outputIndex, y1]])
+                    line = ot.Curve([[outputIndex - 1, lastSensitivities[inputIndex]], [outputIndex, y1]])
                     line.setLineStyle("dashed")
                     line.setColor(palette[inputIndex])
                     graph.add(line)
@@ -253,13 +253,13 @@ class KarhunenLoeveSensitivityAnalysis:
                 y0 = y1
                 lastSensitivities[inputIndex] = y1
             y1 = variances[outputIndex, 0]
-            curve = Curve([[outputIndex, y0], [outputIndex, y1]])
+            curve = ot.Curve([[outputIndex, y0], [outputIndex, y1]])
             curve.setColor(palette[inputDimension])
             curve.setLineWidth(3)
             if outputIndex == 0:
                 curve.setLegend("KL tot. var.")
             else:
-                line = Curve([[outputIndex - 1, lastSensitivities[inputDimension]], [outputIndex, y1]])
+                line = ot.Curve([[outputIndex - 1, lastSensitivities[inputDimension]], [outputIndex, y1]])
                 line.setLineStyle("dashed")
                 line.setColor(palette[inputDimension])
                 graph.add(line)
