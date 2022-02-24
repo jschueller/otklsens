@@ -1,6 +1,7 @@
 import openturns as ot
 from .EmpiricalKarhunenLoeveAlgorithm import *
 from .EmpiricalKarhunenLoeveResult import *
+import math as m
 
 class KarhunenLoeveSensitivityAnalysis:
     def __init__(self, inputProcessSample, outputProcessSample, inputEpsilon=1e-3, outputEpsilon=1e-3, factories=list(), basisSize = 100, sparse = True, anisotropic = False):
@@ -71,7 +72,7 @@ class KarhunenLoeveSensitivityAnalysis:
             sigma0 = allInputVariances[j0]
             for j in range(j0, j1):
                 print("i=", i, "j=", j, "index=", index)
-                weights.add(sqrt(sigma0 / allInputVariances[j]))
+                weights.add(m.sqrt(sigma0 / allInputVariances[j]))
                 marginalDistribution = self.factories_[i].build(inSample.getMarginal(index))
                 coll.add(marginalDistribution)
                 polyColl.add(ot.StandardDistributionPolynomialFactory(marginalDistribution))

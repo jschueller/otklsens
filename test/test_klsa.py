@@ -1,6 +1,6 @@
 import openturns as ot
 from otklsens import KarhunenLoeveSensitivityAnalysis
-from math import *
+import math as m
 from time import time
 from openturns.viewer import View
 
@@ -156,7 +156,7 @@ def test_klsa_big():
     for i in range(size):
         graph = inputEKLResult.getMarginalMean(i).draw(tg.getStart(), tg.getEnd())
         graph.setTitle("Mean of input " + str(i))
-        #delta = sqrt(inputEKLResult.getMarginalVariances(i)[0])
+        #delta = m.sqrt(inputEKLResult.getMarginalVariances(i)[0])
         #bb[2] -= delta
         #bb[3] += delta
         View(graph).save("Input_" + str(i).zfill(2) + "_Mean.pdf")
@@ -168,7 +168,7 @@ def test_klsa_big():
         graph = ot.Graph("KL modes input " + str(i), "t", "phi", True, "topright")
         variances = inputEKLResult.getMarginalVariances(i)
         for j in range(N):
-            curveJ = (basis[j] * ot.SymbolicFunction("x", str(sqrt(variances[j])))).draw(tg.getStart(), tg.getEnd()).getDrawable(0)
+            curveJ = (basis[j] * ot.SymbolicFunction("x", str(m.sqrt(variances[j])))).draw(tg.getStart(), tg.getEnd()).getDrawable(0)
             curveJ.setLegend("KL " + str(j))
             curveJ.setColor(palette[j])
             graph.add(curveJ)
@@ -190,7 +190,7 @@ def test_klsa_big():
         graph = ot.Graph("KL modes output " + str(i), "t", "phi", True, "topright")
         variances = inputEKLResult.getMarginalVariances(i)
         for j in range(N):
-            curveJ = (basis[j] * ot.SymbolicFunction("x", str(sqrt(variances[j])))).draw(tg.getStart(), tg.getEnd()).getDrawable(0)
+            curveJ = (basis[j] * ot.SymbolicFunction("x", str(m.sqrt(variances[j])))).draw(tg.getStart(), tg.getEnd()).getDrawable(0)
             curveJ.setLegend("KL " + str(j))
             curveJ.setColor(palette[j])
             graph.add(curveJ)

@@ -1,8 +1,8 @@
 import openturns as ot
 from .EmpiricalKarhunenLoeveResult import *
-from numpy import *
+from numpy import array
 from time import *
-from math import *
+import math as m
 
 class EmpiricalKarhunenLoeveAlgorithm:
 
@@ -61,7 +61,7 @@ class EmpiricalKarhunenLoeveAlgorithm:
                         U[i, j] = eigen_pairs[i, j]
                     lamb[i] = -eigen_pairs[i, nbColumns]
                 print("lamb=", lamb)
-                sigma = ot.Point([sqrt(max(0.0, lamb[i])) for i in range(nbColumns)])
+                sigma = ot.Point([m.sqrt(max(0.0, lamb[i])) for i in range(nbColumns)])
                 t1 = time()
             ## print "EV=", t1 - t0, "s"
             ## print "lamb=", lamb, "ev=\n", ev
