@@ -2,6 +2,7 @@ import openturns as ot
 from otklsens import KarhunenLoeveSensitivityAnalysis
 from math import *
 from time import time
+from openturns.viewer import View
 
 def header(msg):
     t0 = time()
@@ -146,7 +147,7 @@ def test_klsa_big():
     print("Draw the variance analysis")
 
     graph = algo.drawVarianceDecomposition(0)
-    graph.draw("VarianceDecomposition.pdf")
+    View(graph).save("VarianceDecomposition.pdf")
 
     print()
     print("Draw the input KL basis")
@@ -158,7 +159,7 @@ def test_klsa_big():
         #delta = sqrt(inputEKLResult.getMarginalVariances(i)[0])
         #bb[2] -= delta
         #bb[3] += delta
-        graph.draw("Input_" + str(i).zfill(2) + "_Mean.pdf")
+        View(graph).save("Input_" + str(i).zfill(2) + "_Mean.pdf")
 
     for i in range(size):
         basis = inputEKLResult.getMarginalBasis(i)
@@ -171,7 +172,7 @@ def test_klsa_big():
             curveJ.setLegend("KL " + str(j))
             curveJ.setColor(palette[j])
             graph.add(curveJ)
-        graph.draw("Input_" + str(i).zfill(2) + "_KLFunctions.pdf")
+        View(graph).save("Input_" + str(i).zfill(2) + "_KLFunctions.pdf")
 
     print()
     print("Draw the output KL basis")
@@ -180,7 +181,7 @@ def test_klsa_big():
     for i in range(size):
         graph = outputEKLResult.getMarginalMean(i).draw(tg.getStart(), tg.getEnd())
         graph.setTitle("Mean of output " + str(i))
-        graph.draw("Output_" + str(i).zfill(2) + "_Mean.pdf")
+        View(graph).save("Output_" + str(i).zfill(2) + "_Mean.pdf")
 
     for i in range(size):
         basis = outputEKLResult.getMarginalBasis(i)
@@ -193,7 +194,7 @@ def test_klsa_big():
             curveJ.setLegend("KL " + str(j))
             curveJ.setColor(palette[j])
             graph.add(curveJ)
-        graph.draw("Output_" + str(i).zfill(2) + "_KLFunctions.pdf")
+        View(graph).save("Output_" + str(i).zfill(2) + "_KLFunctions.pdf")
     print()
 
     print("All significant input variances=", algo.allInputVariances_)
