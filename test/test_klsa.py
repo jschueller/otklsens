@@ -27,7 +27,7 @@ def test_klsa_big():
 
     # Time grid parameters
     T = 3.0
-    NT = 256
+    NT = 32
     tg = ot.RegularGrid(0.0, T / NT, NT)
 
     # Toy function to link input processes to the output process
@@ -83,7 +83,7 @@ def test_klsa_big():
     t0 = header("Creation of the database on which the sensitivity analysis will be done")
 
     # Sampling size
-    size = 8192
+    size = 1024
 
     inSample = X.getSample(size)
     outSample = myFunc(inSample)
