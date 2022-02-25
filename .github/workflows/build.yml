@@ -11,7 +11,7 @@ jobs:
       - name: Build
         shell: bash -l {0}
         run: |
-          conda install -y openturns pytest
+          conda install -y openturns pytest matplotlib
           python setup.py install
           pytest test -s
 
