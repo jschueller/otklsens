@@ -1,8 +1,9 @@
 import openturns as ot
-from otklsens import FieldToPointKarhunenLoeveFCEAlgorithm
+from otklsens import FieldToPointKarhunenLoeveFCEAlgorithm, FieldToPointKarhunenLoeveSensitivityAnalysis
 import math as m
 from time import time
 from openturns.viewer import View
+import pytest
 
 def header(msg):
     t0 = time()
@@ -26,13 +27,8 @@ class pyf2p(ot.OpenTURNSPythonFieldToPointFunction):
         Y = ot.Sample(X).computeMean()
         return Y
 
-
-def test_klfce():
-    t0 = time()
-    # Verbosity
-    ot.Log.Show(ot.Log.INFO)
-    #Log.Show(Log.NONE)
-
+@pytest.fixture
+def process_data():
     # input processs
     mesh = ot.RegularGrid(0.0, 0.1, 11)
     cor = ot.CorrelationMatrix(2)
@@ -41,12 +37,18 @@ def test_klfce():
     p2 = ot.GaussianProcess(cov, mesh)
     process = ot.AggregatedProcess([ot.WhiteNoise(), p2])
     process.setTimeGrid(mesh)
-
     f = ot.FieldToPointFunction(pyf2p(mesh))
-
     N = 1000
     x = process.getSample(N)    
     y = f(x)
+    return x, y
+
+def test_klfce(process_data):
+    x, y = process_data
+    t0 = time()
+    # Verbosity
+    ot.Log.Show(ot.Log.INFO)
+    #Log.Show(Log.NONE)
     algo = FieldToPointKarhunenLoeveFCEAlgorithm(x, y)
     algo.run()
     result = algo.getResult()
@@ -55,6 +57,15 @@ def test_klfce():
     print('residuals=', residuals)
     assert ot.Point(residuals).norm() < 1e-2, "residual too big"
     footer(t0)
-    
-    
+
+def test_klsens(process_data):
+    x, y = process_data
+    t0 = time()
+    # Verbosity
+    ot.Log.Show(ot.Log.INFO)
+    #Log.Show(Log.NONE)
+    algo = FieldToPointKarhunenLoeveSensitivityAnalysis(x, y)
+    algo.run()
+    result = algo.getResult()
+    footer(t0) 
     
