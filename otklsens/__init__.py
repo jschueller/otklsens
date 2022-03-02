@@ -1,2 +1,3 @@
-from .KarhunenLoeveSensitivityAnalysis import KarhunenLoeveSensitivityAnalysis
-from .KarhunenLoeveFCEAlgorithm import KarhunenLoeveFCEAlgorithm
+from .KarhunenLoeveSensitivityAnalysis import FieldToPointKarhunenLoeveSensitivityAnalysis
+from .KarhunenLoeveFCEAlgorithm import FieldToPointKarhunenLoeveFCEAlgorithm
+from .KarhunenLoeveFCEAlgorithm import KLCoefficientsDistributionFactory
