@@ -1,58 +1,31 @@
 import openturns as ot
 import math as m
+from .KarhunenLoeveCoefficientsDistributionFactory import *
 
-class MetamodelDistributionFactory:
-    def __init__(self):
-        pass
-    def build(self, sample):
-        return ot.MetaModelAlgorithm.BuildDistribution(sample)
-
-class KLCoefficientsDistributionFactory:
-    def __init__(self):
-        pass
-    def build(self, sample):
-      
-        # try standard PCE distributions
-        factories = [ot.UniformFactory(), ot.NormalFactory(), ot.GammaFactory(), ot.BetaFactory()]
-        dimension = sample.getDimension()
-        marginals = [None] * dimension
-        for i in range(dimension):
-            sample_i = sample.getMarginal(i)
-            candidates = [factory.build(sample_i) for factory in factories]
-            marginals[i], testResult = ot.FittingTest.BestModelBIC(sample_i, candidates)
-            cname = marginals[i].getImplementation().getClassName()
-            if cname != 'Normal':
-                raise ValueError('not Gaussian') 
-        #ot.Log.Info(','.join([marginals[i].getImplementation().getClassName() for i in range(dimension)]))
-        distribution = ot.ComposedDistribution(marginals)
-
-        # test independence
-        isIndependent = True
-        for j in range(dimension):
-            marginalJ = sample.getMarginal(j)
-            for i in range(j + 1, dimension):
-                testResult = ot.HypothesisTest.Spearman(sample.getMarginal(i), marginalJ)
-                isIndependent = isIndependent and testResult.getBinaryQualityMeasure()
-        if not isIndependent:
-            #distribution.setCopula(ot.NormalCopulaFactory().build(sample));
-            raise ValueError('not independent') 
-    
-        return distribution
-
-class KarhunenLoeveFCEResult:
-    def __init__(self, metamodel, residuals):
+class FieldToPointKarhunenLoeveFunctionalChaosResult:
+    def __init__(self, klResult, pceResult, inputProcessSample, outputSample, metamodel, residuals):
+        self.klResult_ = klResult
+        self.pceResult_ = pceResult
+        self.inputProcessSample_ = inputProcessSample
+        self.outputSample_ = outputSample
         self.metamodel_ = metamodel
         self.residuals_ = residuals
+    def getKarhunenLoeveResult(self):
+        return self.klResult_
+    def getFunctionalChaosResult(self):
+        return self.pceResult_
+    def getInputProcessSample(self):
+        return self.inputProcessSample_
+    def getOutputSample(self):
+        return self.outputSample_
     def getMetaModel(self):
         return self.metamodel_
     def getResiduals(self):
         return self.residuals_
 
-
-
-class FieldToPointKarhunenLoeveFCEAlgorithm:
+class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
     """
-    KarhunenLoeve and FCE based field metamodel.
+    KL/FCE-based field->vector metamodel.
 
     Parameters
     ----------
@@ -69,7 +42,7 @@ class FieldToPointKarhunenLoeveFCEAlgorithm:
     degree : int
         PCE degree
     """
-    def __init__(self, inputProcessSample, outputSample, threshold=1e-3, sparse=True, blockIndices=None, factory=KLCoefficientsDistributionFactory(), degree=2):
+    def __init__(self, inputProcessSample, outputSample, threshold=1e-3, sparse=True, blockIndices=None, factory=KarhunenLoeveCoefficientsDistributionFactory(), degree=2):
         if inputProcessSample.getSize() != outputSample.getSize():
             raise ValueError("input/output sample must have the same size")
         if blockIndices is None:
@@ -168,4 +141,4 @@ class FieldToPointKarhunenLoeveFCEAlgorithm:
         for j in range(outputDimension):
             residuals[j] = m.sqrt(residuals[j]) / size
 
-        self.result_ = KarhunenLoeveFCEResult(metamodel, residuals)
+        self.result_ = FieldToPointKarhunenLoeveFunctionalChaosResult(klResult, pceResult, self.inputProcessSample_, self.outputSample_, metamodel, residuals)

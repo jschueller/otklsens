@@ -1,5 +1,5 @@
 import openturns as ot
-from otklsens import FieldToPointKarhunenLoeveFCEAlgorithm, FieldToPointKarhunenLoeveSensitivityAnalysis
+from otklsens import *
 import math as m
 from time import time
 from openturns.viewer import View
@@ -14,6 +14,31 @@ def header(msg):
 
 def footer(t0):
     print("t=", time() - t0, "s")
+
+
+def test_klcoefdf():
+    factory = KarhunenLoeveCoefficientsDistributionFactory()
+    N = 1000
+
+    x = ot.Normal(3).getSample(N)
+    dist = factory.build(x)
+    assert dist.getMarginal(0).getImplementation().__class__.__name__ == 'Normal'
+    assert dist.getCopula().getImplementation().__class__.__name__ == 'IndependentCopula'
+
+    x = ot.Normal([0.0] * 2, ot.CovarianceMatrix([[1.0, 0.8], [0.8, 1.0]])).getSample(N)
+    dist = factory.build(x)
+    assert dist.getMarginal(0).getImplementation().__class__.__name__ == 'Normal'
+    assert dist.getCopula().getImplementation().__class__.__name__ == 'EmpiricalBernsteinCopula'
+
+    x = ot.ComposedDistribution([ot.Uniform()] * 2).getSample(N)
+    dist = factory.build(x)
+    assert dist.getMarginal(0).getImplementation().__class__.__name__ == 'Histogram'
+    assert dist.getCopula().getImplementation().__class__.__name__ == 'IndependentCopula'
+    
+    x = ot.ComposedDistribution([ot.Uniform()] * 2, ot.GumbelCopula()).getSample(N)
+    dist = factory.build(x)
+    assert dist.getMarginal(0).getImplementation().__class__.__name__ == 'Histogram'
+    assert dist.getCopula().getImplementation().__class__.__name__ == 'EmpiricalBernsteinCopula'
 
 
 class pyf2p(ot.OpenTURNSPythonFieldToPointFunction):
@@ -43,29 +68,24 @@ def process_data():
     y = f(x)
     return x, y
 
+#@pytest.mark.skip
 def test_klfce(process_data):
     x, y = process_data
     t0 = time()
     # Verbosity
     ot.Log.Show(ot.Log.INFO)
     #Log.Show(Log.NONE)
-    algo = FieldToPointKarhunenLoeveFCEAlgorithm(x, y)
+    algo = FieldToPointKarhunenLoeveFunctionalChaosAlgorithm(x, y)
     algo.run()
     result = algo.getResult()
     metamodel = result.getMetaModel()
     residuals = result.getResiduals()
     print('residuals=', residuals)
     assert ot.Point(residuals).norm() < 1e-2, "residual too big"
+    sensitivity = FieldToPointKarhunenLoeveFunctionalChaosSobolIndices(result)
+    for j in range(y.getDimension()):
+        for i in range(x.getDimension()):
+            print(f"index({i}, {j}) = {sensitivity.getSobolIndex(i, j)}")
     footer(t0)
 
-def test_klsens(process_data):
-    x, y = process_data
-    t0 = time()
-    # Verbosity
-    ot.Log.Show(ot.Log.INFO)
-    #Log.Show(Log.NONE)
-    algo = FieldToPointKarhunenLoeveSensitivityAnalysis(x, y)
-    algo.run()
-    result = algo.getResult()
-    footer(t0) 
     
