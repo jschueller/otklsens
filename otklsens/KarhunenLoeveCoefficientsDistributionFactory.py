@@ -15,14 +15,15 @@ class KarhunenLoeveCoefficientsDistributionFactory:
         # try Gaussian with fallback to histogram
         dimension = sample.getDimension()
         marginals = [None] * dimension
-        level = ot.ResourceMap.GetAsScalar('MetaModelAlgorithm-PValueThreshold')
         for i in range(dimension):
             sample_i = sample.getMarginal(i)
-            candidate = ot.NormalFactory().build(sample_i)
-            pValue = ot.FittingTest.Kolmogorov(sample_i, candidate, level).getPValue()
-            if pValue < level:
-                candidate = ot.HistogramFactory().build(sample_i)
-            marginals[i] = candidate
+            level = 0.05 # ResourceMap
+            testResult = ot.NormalityTest.CramerVonMisesNormal(sample_i, level)
+            if testResult.getBinaryQualityMeasure():
+                factory = ot.NormalFactory()
+            else:
+                factory = ot.HistogramFactory()
+            marginals[i] = factory.build(sample_i)
         distribution = ot.ComposedDistribution(marginals)
 
         # test independence with fallback to beta copula
@@ -30,7 +31,8 @@ class KarhunenLoeveCoefficientsDistributionFactory:
         for j in range(dimension):
             marginalJ = sample.getMarginal(j)
             for i in range(j + 1, dimension):
-                testResult = ot.HypothesisTest.Spearman(sample.getMarginal(i), marginalJ)
+                level = 0.05 # ResourceMap
+                testResult = ot.HypothesisTest.Spearman(sample.getMarginal(i), marginalJ, level)
                 isIndependent = isIndependent and testResult.getBinaryQualityMeasure()
         if not isIndependent:
             betaCopula = ot.EmpiricalBernsteinCopula(sample, sample.getSize())

@@ -1,9 +1,11 @@
 import openturns as ot
+import openturns.testing as ott
 from otklsens import *
 import math as m
 from time import time
 from openturns.viewer import View
 import pytest
+
 
 def header(msg):
     t0 = time()
@@ -22,23 +24,31 @@ def test_klcoefdf():
 
     x = ot.Normal(3).getSample(N)
     dist = factory.build(x)
-    assert dist.getMarginal(0).getImplementation().__class__.__name__ == 'Normal'
-    assert dist.getCopula().getImplementation().__class__.__name__ == 'IndependentCopula'
+    assert 'Normal' in repr(dist.getMarginal(0))
+    assert 'IndependentCopula' in repr(dist.getCopula())
+    #assert dist.getMarginal(0).getImplementation().__class__.__name__ == 'Normal'
+    #assert dist.getCopula().getImplementation().__class__.__name__ == 'IndependentCopula'
 
     x = ot.Normal([0.0] * 2, ot.CovarianceMatrix([[1.0, 0.8], [0.8, 1.0]])).getSample(N)
     dist = factory.build(x)
-    assert dist.getMarginal(0).getImplementation().__class__.__name__ == 'Normal'
-    assert dist.getCopula().getImplementation().__class__.__name__ == 'EmpiricalBernsteinCopula'
+    assert 'Normal' in repr(dist.getMarginal(0))
+    assert 'EmpiricalBernsteinCopula' in repr(dist.getCopula())
+    #assert dist.getMarginal(0).getImplementation().__class__.__name__ == 'Normal'
+    #assert dist.getCopula().getImplementation().__class__.__name__ == 'EmpiricalBernsteinCopula'
 
-    x = ot.ComposedDistribution([ot.Uniform()] * 2).getSample(N)
+    x = ot.ComposedDistribution([ot.TruncatedNormal(0.0,1.0,-2.0,2.0)] * 2).getSample(N)
     dist = factory.build(x)
-    assert dist.getMarginal(0).getImplementation().__class__.__name__ == 'Histogram'
-    assert dist.getCopula().getImplementation().__class__.__name__ == 'IndependentCopula'
+    assert 'Histogram' in repr(dist.getMarginal(0))
+    assert 'IndependentCopula' in repr(dist.getCopula())
+    #assert dist.getMarginal(0).getImplementation().__class__.__name__ == 'Histogram'
+    #assert dist.getCopula().getImplementation().__class__.__name__ == 'IndependentCopula'
     
     x = ot.ComposedDistribution([ot.Uniform()] * 2, ot.GumbelCopula()).getSample(N)
     dist = factory.build(x)
-    assert dist.getMarginal(0).getImplementation().__class__.__name__ == 'Histogram'
-    assert dist.getCopula().getImplementation().__class__.__name__ == 'EmpiricalBernsteinCopula'
+    assert 'Histogram' in repr(dist.getMarginal(0))
+    assert 'EmpiricalBernsteinCopula' in repr(dist.getCopula())
+    #assert dist.getMarginal(0).getImplementation().__class__.__name__ == 'Histogram'
+    #assert dist.getCopula().getImplementation().__class__.__name__ == 'EmpiricalBernsteinCopula'
 
 
 class pyf2p(ot.OpenTURNSPythonFieldToPointFunction):
@@ -86,6 +96,6 @@ def test_klfce(process_data):
     for j in range(y.getDimension()):
         for i in range(x.getDimension()):
             print(f"index({i}, {j}) = {sensitivity.getSobolIndex(i, j)}")
+    sobol_0 = [sensitivity.getSobolIndex(i, 0) for i in range(x.getDimension())]
+    ott.assert_almost_equal(sobol_0, [0.366848, 0.428892, 0.201355], 5e-2, 5e-2)
     footer(t0)
-
-    

@@ -3,17 +3,23 @@ import math as m
 from .KarhunenLoeveCoefficientsDistributionFactory import *
 
 class FieldToPointKarhunenLoeveFunctionalChaosResult:
-    def __init__(self, klResult, pceResult, inputProcessSample, outputSample, metamodel, residuals):
-        self.klResult_ = klResult
-        self.pceResult_ = pceResult
+    def __init__(self, klResultCollection, marginalCoefficients, marginalVariances, fcaResult, inputProcessSample, outputSample, metamodel, residuals):
+        self.klResultCollection_ = klResultCollection
+        self.marginalCoefficients_ = marginalCoefficients
+        self.marginalVariances_ = marginalVariances
+        self.fcaResult_ = fcaResult
         self.inputProcessSample_ = inputProcessSample
         self.outputSample_ = outputSample
         self.metamodel_ = metamodel
         self.residuals_ = residuals
-    def getKarhunenLoeveResult(self):
-        return self.klResult_
+    def getKarhunenLoeveResultCollection(self):
+        return self.klResultCollection_
+    def getMarginalCoefficients(self, i):
+        return self.marginalCoefficients_[i]
+    def getMarginalVariances(self, i):
+        return self.marginalVariances_[i]
     def getFunctionalChaosResult(self):
-        return self.pceResult_
+        return self.fcaResult_
     def getInputProcessSample(self):
         return self.inputProcessSample_
     def getOutputSample(self):
@@ -115,8 +121,10 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
         return algo.getResult()
 
     def run(self):
-        # build KL expansion of input process sample
-        algo = ot.KarhunenLoeveSVDAlgorithm(self.inputProcessSample_, self.threshold_)
+        # build KL decomposition of input process sample
+        inputDimension = self.inputProcessSample_.getDimension()
+        centered = False
+        algo = ot.KarhunenLoeveSVDAlgorithm(self.inputProcessSample_, self.threshold_, centered)
         algo.run()
         klResult = algo.getResult()
 
@@ -125,10 +133,10 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
         inputSample = projection(self.inputProcessSample_)
 
         # build PCE expansion of projected input sample vs output sample
-        pceResult = self.computePCE(inputSample, self.outputSample_)
+        fcaResult = self.computePCE(inputSample, self.outputSample_)
 
         # compose input projection + PCE interpolation
-        metamodel = ot.FieldToPointConnection(pceResult.getMetaModel(), projection)
+        metamodel = ot.FieldToPointConnection(fcaResult.getMetaModel(), projection)
 
         # compute residual
         outputDimension = self.outputSample_.getDimension()
@@ -141,4 +149,18 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
         for j in range(outputDimension):
             residuals[j] = m.sqrt(residuals[j]) / size
 
-        self.result_ = FieldToPointKarhunenLoeveFunctionalChaosResult(klResult, pceResult, self.inputProcessSample_, self.outputSample_, metamodel, residuals)
+        # marginal KL decomposition
+        klResultCollection = []
+        marginalCoefficients = []
+        marginalVariances = []
+        for d in range(inputDimension):
+            inputProcessSample_i = self.inputProcessSample_.getMarginal(d)
+            algo = ot.KarhunenLoeveSVDAlgorithm(inputProcessSample_i, self.threshold_, centered)
+            algo.run()
+            klResult_i = algo.getResult()
+            projection = ot.KarhunenLoeveProjection(klResult_i)
+            marginalCoefficients.append(projection(inputProcessSample_i))
+            marginalVariances.append(ot.Point([sigma**2 for sigma in klResult_i.getEigenvalues()]))
+            klResultCollection.append(klResult_i)
+
+        self.result_ = FieldToPointKarhunenLoeveFunctionalChaosResult(klResultCollection, marginalCoefficients, marginalVariances, fcaResult, self.inputProcessSample_, self.outputSample_, metamodel, residuals)
