@@ -6,49 +6,9 @@ class FieldToPointKarhunenLoeveFunctionalChaosSobolIndices:
         self.result_ = result
         if blockIndices is None:
             blockIndices = [list(range(result.getInputProcessSample().getDimension()))]
-        self.alreadyComputedAggregatedCoefficients_ = False
-
-    def aggregateCoefficients(self, epsilon=1e-3):
-        fullSample = ot.Sample(self.result_.getMarginalCoefficients(0).getSize(), 0)
-        allSize = ot.Indices()
-        allVariances = ot.Point()
-        last = 0
-        size = len(self.result_.getKarhunenLoeveResultCollection())
-        for i in range(size):
-            variances = self.result_.getMarginalVariances(i)
-            small = variances[0] * epsilon
-            Ki = len(variances)
-            for j in range(Ki):
-                if variances[j] < small:
-                    Ki = j + 1
-                    break
-            indices = ot.Indices(Ki)
-            indices.fill()
-            fullSample.stack(self.result_.getMarginalCoefficients(i).getMarginal(indices))
-            last += indices.getSize()
-            allSize.add(last)
-            allVariances.add(variances[indices])
-        return fullSample, allSize, allVariances
-
+        self.marginalInputSizes_ = [len(result_i.getEigenvalues()) for result_i in result.getKarhunenLoeveResultCollection()]
 
     def getSobolIndex(self, i, j):
-      
-        if not self.alreadyComputedAggregatedCoefficients_:
-            self.fullInputSample_, self.marginalInputSizes_, _ = self.aggregateCoefficients()
-
-        #coefficients = self.result_.getFunctionalChaosResult().getCoefficients()
-        #size = coefficients.getSize()
-        
-        #enumerateFunction = self.result_.getFunctionalChaosResult().getOrthogonalBasis().getEnumerateFunction()
-        #coefficientIndices = self.result_.getFunctionalChaosResult().getIndices()
-        #inputDimension = self.result_.getInputProcessSample().getDimension()
-        #for i in range(inputDimension):
-            #marginalCoefficients = self.result_.getMarginalCoefficients(i)
-            #marginalVariances = self.result_.getMarginalVariances(i)
-            #print('mc=', marginalCoefficients.getSize(), marginalCoefficients.getDimension())
-            
-        #fullInputSample, self.marginalInputSizes_, self.allInputVariances_
-        
         # Here we have to sum all the contributions of the coefficients of the PCE
         # that contributes to any of the coefficients of the jth marginal of the
         # output process.
