@@ -4,10 +4,8 @@ from .KarhunenLoeveCoefficientsDistributionFactory import *
 from .StackedFieldToPointFunction import *
 
 class FieldToPointKarhunenLoeveFunctionalChaosResult:
-    def __init__(self, klResultCollection, marginalCoefficients, marginalVariances, fcaResult, inputProcessSample, outputSample, blockIndices, metamodel, residuals):
+    def __init__(self, klResultCollection, fcaResult, inputProcessSample, outputSample, blockIndices, metamodel, residuals):
         self.klResultCollection_ = klResultCollection
-        self.marginalCoefficients_ = marginalCoefficients
-        self.marginalVariances_ = marginalVariances
         self.fcaResult_ = fcaResult
         self.inputProcessSample_ = inputProcessSample
         self.outputSample_ = outputSample
@@ -16,10 +14,6 @@ class FieldToPointKarhunenLoeveFunctionalChaosResult:
         self.residuals_ = residuals
     def getKarhunenLoeveResultCollection(self):
         return self.klResultCollection_
-    def getMarginalCoefficients(self, i):
-        return self.marginalCoefficients_.getMarginal(i)
-    def getMarginalVariances(self, i):
-        return self.marginalVariances_[i]
     def getFunctionalChaosResult(self):
         return self.fcaResult_
     def getInputProcessSample(self):
@@ -131,7 +125,6 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
         klResultCollection = []
         projectionCollection = []
         inputSample = ot.Sample(size, 0)
-        marginalVariances = []
         for i in range(len(self.blockIndices_)):
             blockIndices_i = self.blockIndices_[i]
             inputProcessSample_i = self.inputProcessSample_.getMarginal(blockIndices_i)
@@ -142,7 +135,6 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
             projection_i = ot.KarhunenLoeveProjection(klResult_i)
             projectionCollection.append(projection_i)
             inputSample.stack(projection_i(inputProcessSample_i))
-            marginalVariances.append(ot.Point([sigma**2 for sigma in klResult_i.getEigenvalues()]))
             klResultCollection.append(klResult_i)
 
         # input process sample projection (+ reorder by blocks)
@@ -167,4 +159,4 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
         for j in range(outputDimension):
             residuals[j] = m.sqrt(residuals[j]) / size
         
-        self.result_ = FieldToPointKarhunenLoeveFunctionalChaosResult(klResultCollection, inputSample, marginalVariances, fcaResult, self.inputProcessSample_, self.outputSample_, self.blockIndices_, metamodel, residuals)
+        self.result_ = FieldToPointKarhunenLoeveFunctionalChaosResult(klResultCollection, fcaResult, self.inputProcessSample_, self.outputSample_, self.blockIndices_, metamodel, residuals)
