@@ -4,13 +4,14 @@ from .KarhunenLoeveCoefficientsDistributionFactory import *
 from .StackedFieldToPointFunction import *
 
 class FieldToPointKarhunenLoeveFunctionalChaosResult:
-    def __init__(self, klResultCollection, marginalCoefficients, marginalVariances, fcaResult, inputProcessSample, outputSample, metamodel, residuals):
+    def __init__(self, klResultCollection, marginalCoefficients, marginalVariances, fcaResult, inputProcessSample, outputSample, blockIndices, metamodel, residuals):
         self.klResultCollection_ = klResultCollection
         self.marginalCoefficients_ = marginalCoefficients
         self.marginalVariances_ = marginalVariances
         self.fcaResult_ = fcaResult
         self.inputProcessSample_ = inputProcessSample
         self.outputSample_ = outputSample
+        self.blockIndices_ = blockIndices
         self.metamodel_ = metamodel
         self.residuals_ = residuals
     def getKarhunenLoeveResultCollection(self):
@@ -25,6 +26,8 @@ class FieldToPointKarhunenLoeveFunctionalChaosResult:
         return self.inputProcessSample_
     def getOutputSample(self):
         return self.outputSample_
+    def getBlockIndices(self):
+        return self.blockIndices_
     def getMetaModel(self):
         return self.metamodel_
     def getResiduals(self):
@@ -49,15 +52,15 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
     degree : int
         PCE degree
     """
-    def __init__(self, inputProcessSample, outputSample, threshold=1e-3, sparse=True, blockIndices=None, factory=KarhunenLoeveCoefficientsDistributionFactory(), degree=2):
+    def __init__(self, inputProcessSample, outputSample, blockIndices=None, threshold=1e-3, sparse=True, factory=KarhunenLoeveCoefficientsDistributionFactory(), degree=2):
         if inputProcessSample.getSize() != outputSample.getSize():
             raise ValueError("input/output sample must have the same size")
-        if blockIndices is None:
-            blockIndices = list(range(inputProcessSample.getDimension()))
         self.inputProcessSample_ = inputProcessSample
         self.outputSample_ = outputSample
-        self.threshold_ = threshold
+        if blockIndices is None:
+            blockIndices = [[j] for j in range(inputProcessSample.getDimension())]
         self.blockIndices_ = blockIndices
+        self.threshold_ = threshold
         self.sparse_ = sparse
         self.result_ = None
         self.anisotropic_ = False
@@ -122,18 +125,17 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
         return algo.getResult()
 
     def run(self):
-        # build KL decomposition of input process sample
+        # build marginal KL decompositions of input process sample
         inputDimension = self.inputProcessSample_.getDimension()
         size = self.inputProcessSample_.getSize()
-
-        # marginal KL decomposition
         klResultCollection = []
         projectionCollection = []
         inputSample = ot.Sample(size, 0)
         marginalVariances = []
-        for d in range(inputDimension):
-            inputProcessSample_i = self.inputProcessSample_.getMarginal(d)
-            centered = False
+        for i in range(len(self.blockIndices_)):
+            blockIndices_i = self.blockIndices_[i]
+            inputProcessSample_i = self.inputProcessSample_.getMarginal(blockIndices_i)
+            centered = True
             algo = ot.KarhunenLoeveSVDAlgorithm(inputProcessSample_i, self.threshold_, centered)
             algo.run()
             klResult_i = algo.getResult()
@@ -143,13 +145,13 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
             marginalVariances.append(ot.Point([sigma**2 for sigma in klResult_i.getEigenvalues()]))
             klResultCollection.append(klResult_i)
 
-        # project input process sample
-        py2f = StackedFieldToPointFunction(projectionCollection)
+        # input process sample projection (+ reorder by blocks)
+        py2f = StackedFieldToPointFunction(projectionCollection, self.blockIndices_)
         projection = ot.FieldToPointFunction(py2f)
 
         # build PCE expansion of projected input sample vs output sample
         fcaResult = self.computePCE(inputSample, self.outputSample_)
-        print(f"FCA residuals={fcaResult.getResiduals()}")
+        print(f"PCE relative error={fcaResult.getRelativeErrors()}")
 
         # compose input projection + PCE interpolation
         metamodel = ot.FieldToPointConnection(fcaResult.getMetaModel(), projection)
@@ -165,4 +167,4 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
         for j in range(outputDimension):
             residuals[j] = m.sqrt(residuals[j]) / size
         
-        self.result_ = FieldToPointKarhunenLoeveFunctionalChaosResult(klResultCollection, inputSample, marginalVariances, fcaResult, self.inputProcessSample_, self.outputSample_, metamodel, residuals)
+        self.result_ = FieldToPointKarhunenLoeveFunctionalChaosResult(klResultCollection, inputSample, marginalVariances, fcaResult, self.inputProcessSample_, self.outputSample_, self.blockIndices_, metamodel, residuals)

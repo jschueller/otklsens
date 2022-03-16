@@ -102,4 +102,19 @@ def test_klfce(process_data):
             print(f"index({i}, {j}) = {sensitivity.getSobolIndex(i, j)}")
     sobol_0 = [sensitivity.getSobolIndex(i, 0) for i in range(x.getDimension())]
     #ott.assert_almost_equal(sobol_0, [0.366848, 0.428892, 0.201355], 5e-2, 5e-2)
+
+    # now with block indices
+    algo = FieldToPointKarhunenLoeveFunctionalChaosAlgorithm(x, y, [[0], [1, 2]])
+    algo.run()
+    result = algo.getResult()
+    metamodel = result.getMetaModel()
+    residuals = result.getResiduals()
+    print('residuals=', residuals)
+    #assert ot.Point(residuals).norm() < 1e-3, "residual too big"
+    sensitivity = FieldToPointKarhunenLoeveFunctionalChaosSobolIndices(result)
+    for j in range(y.getDimension()):
+        for i in range(x.getDimension()):
+            print(f"index({i}, {j}) = {sensitivity.getSobolIndex(i, j)}")
+    sobol_0 = [sensitivity.getSobolIndex(i, 0) for i in range(x.getDimension())]
+
     footer(t0)

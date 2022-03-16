@@ -1,25 +1,34 @@
 import openturns as ot
 import math as m
+import itertools
 
 class FieldToPointKarhunenLoeveFunctionalChaosSobolIndices:
-    def __init__(self, result, blockIndices=None):
+    def __init__(self, result):
         self.result_ = result
-        if blockIndices is None:
-            blockIndices = [list(range(result.getInputProcessSample().getDimension()))]
-        self.marginalInputSizes_ = [len(result_i.getEigenvalues()) for result_i in result.getKarhunenLoeveResultCollection()]
+        kl_sizes = [len(result_i.getEigenvalues()) for result_i in result.getKarhunenLoeveResultCollection()]
+        self.marginalInputSizes_ = list(itertools.accumulate(kl_sizes))
 
     def getSobolIndex(self, i, j):
+        if i >= self.result_.getInputProcessSample().getDimension():
+            raise ValueError(f"Cannot ask for input index {i}")
+        if j >= self.result_.getOutputSample().getDimension():
+            raise ValueError(f"Cannot ask for output index {j}")
+        blockIndices = self.result_.getBlockIndices()
         # Here we have to sum all the contributions of the coefficients of the PCE
         # that contributes to any of the coefficients of the jth marginal of the
         # output process.
         variance = 0.0
         conditionalVariance = 0.0
+        # find block index of variable i
+        for b in range(len(blockIndices)):
+            if i in blockIndices[b]:
+                bi = b
         # Get the range of input and output indices corresponding to the input marginal process i and the output marginal process j
         # Input
         startInput = 0
-        if i > 0:
-            startInput = self.marginalInputSizes_[i - 1]
-        stopInput = self.marginalInputSizes_[i]
+        if bi > 0:
+            startInput = self.marginalInputSizes_[bi - 1]
+        stopInput = self.marginalInputSizes_[bi]
         # Output
         outputIndex = j
         # Now, select the relevant coefficients
