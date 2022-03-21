@@ -89,7 +89,10 @@ def test_klfce(process_data):
     # Verbosity
     ot.Log.Show(ot.Log.INFO)
     #Log.Show(Log.NONE)
-    algo = FieldToPointKarhunenLoeveFunctionalChaosAlgorithm(x, y)
+    dimension = x.getDimension()
+    degree = 2
+    basisSize = m.comb(dimension + degree, dimension)
+    algo = FieldToPointKarhunenLoeveFunctionalChaosAlgorithm(x, y, basisSize=basisSize)
     algo.run()
     result = algo.getResult()
     metamodel = result.getMetaModel()

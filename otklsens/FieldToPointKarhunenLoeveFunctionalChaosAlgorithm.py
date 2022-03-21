@@ -43,10 +43,10 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
         Whether to perform sparse or full FCE
     factory : :class:`openturns.DistributionFactory`
         Factory for the PCE on projected input process sample
-    degree : int
-        PCE degree
+    basisSize : int
+        PCE basis size
     """
-    def __init__(self, inputProcessSample, outputSample, blockIndices=None, threshold=1e-3, sparse=True, factory=KarhunenLoeveCoefficientsDistributionFactory(), degree=2):
+    def __init__(self, inputProcessSample, outputSample, blockIndices=None, threshold=1e-3, sparse=True, factory=KarhunenLoeveCoefficientsDistributionFactory(), basisSize=100):
         if inputProcessSample.getSize() != outputSample.getSize():
             raise ValueError("input/output sample must have the same size")
         self.inputProcessSample_ = inputProcessSample
@@ -59,7 +59,7 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
         self.result_ = None
         self.anisotropic_ = False
         self.factory_ = factory
-        self.degree_ = degree
+        self.basisSize_ = basisSize
 
     def setSparse(sparse):
         self.sparse_ = sparse
@@ -101,15 +101,8 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
         enumerateFunction = ot.LinearEnumerateFunction(dimension)
         # Build the basis
         productBasis = ot.OrthogonalProductPolynomialFactory(polyColl, enumerateFunction)
-        #print("distribution dimension=", distribution.getDimension())
-        #print("enumerate dimension=", enumerateFunction.getDimension())
-        #print("basis size=", polyColl.getSize())
         # run algorithm
-        basisSize = m.comb(dimension + self.degree_, dimension)
-        ot.Log.Info('dimension=' + str(dimension))
-        ot.Log.Info('basisSize=' + str(basisSize))
-        ot.Log.Info('outdim=' + str(outSample.getDimension()))
-        adaptiveStrategy = ot.FixedStrategy(productBasis, basisSize)
+        adaptiveStrategy = ot.FixedStrategy(productBasis, self.basisSize_)
         if self.sparse_:
             projectionStrategy = ot.LeastSquaresStrategy(ot.LeastSquaresMetaModelSelectionFactory(ot.LARS(), ot.CorrectedLeaveOneOut()))
         else:
