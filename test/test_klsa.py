@@ -107,7 +107,8 @@ def test_klfce(process_data):
     #ott.assert_almost_equal(sobol_0, [0.366848, 0.428892, 0.201355], 5e-2, 5e-2)
 
     # now with block indices
-    algo = FieldToPointKarhunenLoeveFunctionalChaosAlgorithm(x, y, [[0], [1, 2]])
+    blockIndices = [[0], [1, 2]]
+    algo = FieldToPointKarhunenLoeveFunctionalChaosAlgorithm(x, y, blockIndices)
     algo.run()
     result = algo.getResult()
     metamodel = result.getMetaModel()
@@ -116,8 +117,8 @@ def test_klfce(process_data):
     #assert ot.Point(residuals).norm() < 1e-3, "residual too big"
     sensitivity = FieldToPointKarhunenLoeveFunctionalChaosSobolIndices(result)
     for j in range(y.getDimension()):
-        for i in range(x.getDimension()):
+        for i in range(len(blockIndices)):
             print(f"index({i}, {j}) = {sensitivity.getSobolIndex(i, j)}")
-    sobol_0 = [sensitivity.getSobolIndex(i, 0) for i in range(x.getDimension())]
+    sobol_0 = [sensitivity.getSobolIndex(i, 0) for i in range(len(blockIndices))]
 
     footer(t0)

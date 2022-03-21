@@ -9,7 +9,7 @@ class FieldToPointKarhunenLoeveFunctionalChaosSobolIndices:
         self.marginalInputSizes_ = list(itertools.accumulate(kl_sizes))
 
     def getSobolIndex(self, i, j):
-        if i >= self.result_.getInputProcessSample().getDimension():
+        if i >= len(self.result_.getBlockIndices()):
             raise ValueError(f"Cannot ask for input index {i}")
         if j >= self.result_.getOutputSample().getDimension():
             raise ValueError(f"Cannot ask for output index {j}")
@@ -19,16 +19,12 @@ class FieldToPointKarhunenLoeveFunctionalChaosSobolIndices:
         # output process.
         variance = 0.0
         conditionalVariance = 0.0
-        # find block index of variable i
-        for b in range(len(blockIndices)):
-            if i in blockIndices[b]:
-                bi = b
         # Get the range of input and output indices corresponding to the input marginal process i and the output marginal process j
         # Input
         startInput = 0
-        if bi > 0:
-            startInput = self.marginalInputSizes_[bi - 1]
-        stopInput = self.marginalInputSizes_[bi]
+        if i > 0:
+            startInput = self.marginalInputSizes_[i - 1]
+        stopInput = self.marginalInputSizes_[i]
         # Output
         outputIndex = j
         # Now, select the relevant coefficients

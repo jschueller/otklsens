@@ -51,9 +51,15 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
             raise ValueError("input/output sample must have the same size")
         self.inputProcessSample_ = inputProcessSample
         self.outputSample_ = outputSample
+        inputDimension = inputProcessSample.getDimension()
         if blockIndices is None:
-            blockIndices = [[j] for j in range(inputProcessSample.getDimension())]
+            blockIndices = [[j] for j in range(inputDimension)]
         self.blockIndices_ = blockIndices
+        flat = ot.Indices()
+        for block in blockIndices:
+            flat.add(ot.Indices(block))
+        if flat.getSize() != inputDimension or not flat.check(inputDimension):
+            raise ValueError("invalid block indices")
         self.threshold_ = threshold
         self.sparse_ = sparse
         self.result_ = None
@@ -128,7 +134,7 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
             projectionCollection.append(projection_i)
             inputSample.stack(projection_i(inputProcessSample_i))
             klResultCollection.append(klResult_i)
-            ot.Log.Info(f"block={self.blockIndices_[i]} ev={klResult_i.getEigenvalues()}")
+            ot.Log.Info(f"block#{i}={self.blockIndices_[i]} ev={klResult_i.getEigenvalues()}")
 
         # input process sample projection (+ reorder by blocks)
         py2f = StackedFieldToPointFunction(projectionCollection, self.blockIndices_)
