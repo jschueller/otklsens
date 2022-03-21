@@ -119,8 +119,7 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
         projectionCollection = []
         inputSample = ot.Sample(size, 0)
         for i in range(len(self.blockIndices_)):
-            blockIndices_i = self.blockIndices_[i]
-            inputProcessSample_i = self.inputProcessSample_.getMarginal(blockIndices_i)
+            inputProcessSample_i = self.inputProcessSample_.getMarginal(self.blockIndices_[i])
             centered = True
             algo = ot.KarhunenLoeveSVDAlgorithm(inputProcessSample_i, self.threshold_, centered)
             algo.run()
@@ -129,6 +128,7 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
             projectionCollection.append(projection_i)
             inputSample.stack(projection_i(inputProcessSample_i))
             klResultCollection.append(klResult_i)
+            ot.Log.Info(f"block={self.blockIndices_[i]} ev={klResult_i.getEigenvalues()}")
 
         # input process sample projection (+ reorder by blocks)
         py2f = StackedFieldToPointFunction(projectionCollection, self.blockIndices_)
@@ -136,7 +136,7 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
 
         # build PCE expansion of projected input sample vs output sample
         fcaResult = self.computePCE(inputSample, self.outputSample_)
-        print(f"PCE relative error={fcaResult.getRelativeErrors()}")
+        ot.Log.Info(f"PCE relative error={fcaResult.getRelativeErrors()}")
 
         # compose input projection + PCE interpolation
         metamodel = ot.FieldToPointConnection(fcaResult.getMetaModel(), projection)
