@@ -5,7 +5,7 @@ import itertools
 class FieldToPointKLFCESobolIndices:
     def __init__(self, result):
         self.result_ = result
-        kl_sizes = [len(result_i.getEigenvalues()) for result_i in result.getKarhunenLoeveResultCollection()]
+        kl_sizes = [len(result_i.getEigenvalues()) for result_i in result.getKLResultCollection()]
         self.marginalInputSizes_ = list(itertools.accumulate(kl_sizes))
 
     def getSobolIndex(self, i, j):
@@ -13,7 +13,6 @@ class FieldToPointKLFCESobolIndices:
             raise ValueError(f"Cannot ask for input index {i}")
         if j >= self.result_.getOutputSample().getDimension():
             raise ValueError(f"Cannot ask for output index {j}")
-        blockIndices = self.result_.getBlockIndices()
         # Here we have to sum all the contributions of the coefficients of the PCE
         # that contributes to any of the coefficients of the jth marginal of the
         # output process.
@@ -25,15 +24,13 @@ class FieldToPointKLFCESobolIndices:
         if i > 0:
             startInput = self.marginalInputSizes_[i - 1]
         stopInput = self.marginalInputSizes_[i]
-        # Output
-        outputIndex = j
         # Now, select the relevant coefficients
-        coefficients = self.result_.getFunctionalChaosResult().getCoefficients()
+        coefficients = self.result_.getFCEResult().getCoefficients()
         size = coefficients.getSize()
-        enumerateFunction = self.result_.getFunctionalChaosResult().getOrthogonalBasis().getEnumerateFunction()
-        coefficientIndices = self.result_.getFunctionalChaosResult().getIndices()
+        enumerateFunction = self.result_.getFCEResult().getOrthogonalBasis().getEnumerateFunction()
+        coefficientIndices = self.result_.getFCEResult().getIndices()
         for coeffIndex in range(size):
-            coeff = coefficients[coeffIndex, outputIndex]
+            coeff = coefficients[coeffIndex, j]
             # Only non-zero coefficients have to be taken into account
             if (coeff != 0.0):
                 k2 = coeff * coeff

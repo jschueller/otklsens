@@ -4,18 +4,18 @@ from .KLCoefficientsDistributionFactory import *
 from .StackedFieldToPointFunction import *
 
 class FieldToPointKLFCEResult:
-    def __init__(self, klResultCollection, fcaResult, inputProcessSample, outputSample, blockIndices, metamodel, residuals):
+    def __init__(self, klResultCollection, fceResult, inputProcessSample, outputSample, blockIndices, metamodel, residuals):
         self.klResultCollection_ = klResultCollection
-        self.fcaResult_ = fcaResult
+        self.fceResult_ = fceResult
         self.inputProcessSample_ = inputProcessSample
         self.outputSample_ = outputSample
         self.blockIndices_ = blockIndices
         self.metamodel_ = metamodel
         self.residuals_ = residuals
-    def getKarhunenLoeveResultCollection(self):
+    def getKLResultCollection(self):
         return self.klResultCollection_
-    def getFunctionalChaosResult(self):
-        return self.fcaResult_
+    def getFCEResult(self):
+        return self.fceResult_
     def getInputProcessSample(self):
         return self.inputProcessSample_
     def getOutputSample(self):
@@ -141,11 +141,11 @@ class FieldToPointKLFCEAlgorithm:
         projection = ot.FieldToPointFunction(py2f)
 
         # build PCE expansion of projected input sample vs output sample
-        fcaResult = self.computePCE(inputSample, self.outputSample_)
-        ot.Log.Info(f"PCE relative error={fcaResult.getRelativeErrors()}")
+        fceResult = self.computePCE(inputSample, self.outputSample_)
+        ot.Log.Info(f"PCE relative error={fceResult.getRelativeErrors()}")
 
         # compose input projection + PCE interpolation
-        metamodel = ot.FieldToPointConnection(fcaResult.getMetaModel(), projection)
+        metamodel = ot.FieldToPointConnection(fceResult.getMetaModel(), projection)
 
         # compute residual
         outputDimension = self.outputSample_.getDimension()
@@ -158,4 +158,4 @@ class FieldToPointKLFCEAlgorithm:
         for j in range(outputDimension):
             residuals[j] = m.sqrt(residuals[j]) / size
         
-        self.result_ = FieldToPointKLFCEResult(klResultCollection, fcaResult, self.inputProcessSample_, self.outputSample_, self.blockIndices_, metamodel, residuals)
+        self.result_ = FieldToPointKLFCEResult(klResultCollection, fceResult, self.inputProcessSample_, self.outputSample_, self.blockIndices_, metamodel, residuals)
