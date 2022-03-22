@@ -2,7 +2,7 @@ import openturns as ot
 import math as m
 import itertools
 
-class FieldToPointKarhunenLoeveFunctionalChaosSobolIndices:
+class FieldToPointKLFCESobolIndices:
     def __init__(self, result):
         self.result_ = result
         kl_sizes = [len(result_i.getEigenvalues()) for result_i in result.getKarhunenLoeveResultCollection()]

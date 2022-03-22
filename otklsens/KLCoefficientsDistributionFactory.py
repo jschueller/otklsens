@@ -7,7 +7,7 @@ class MetaModelDistributionFactory:
     def build(self, sample):
         return ot.MetaModelAlgorithm.BuildDistribution(sample)
 
-class KarhunenLoeveCoefficientsDistributionFactory:
+class KLCoefficientsDistributionFactory:
     def __init__(self):
         pass
     def build(self, sample):

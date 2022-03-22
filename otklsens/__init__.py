@@ -1,3 +1,3 @@
-from .FieldToPointKarhunenLoeveFunctionalChaosSobolIndices import *
-from .FieldToPointKarhunenLoeveFunctionalChaosAlgorithm import *
-from .KarhunenLoeveCoefficientsDistributionFactory import *
+from .FieldToPointKLFCESobolIndices import *
+from .FieldToPointKLFCEAlgorithm import *
+from .KLCoefficientsDistributionFactory import *

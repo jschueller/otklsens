@@ -1,9 +1,9 @@
 import openturns as ot
 import math as m
-from .KarhunenLoeveCoefficientsDistributionFactory import *
+from .KLCoefficientsDistributionFactory import *
 from .StackedFieldToPointFunction import *
 
-class FieldToPointKarhunenLoeveFunctionalChaosResult:
+class FieldToPointKLFCEResult:
     def __init__(self, klResultCollection, fcaResult, inputProcessSample, outputSample, blockIndices, metamodel, residuals):
         self.klResultCollection_ = klResultCollection
         self.fcaResult_ = fcaResult
@@ -27,7 +27,7 @@ class FieldToPointKarhunenLoeveFunctionalChaosResult:
     def getResiduals(self):
         return self.residuals_
 
-class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
+class FieldToPointKLFCEAlgorithm:
     """
     KL/FCE-based field->vector metamodel.
 
@@ -46,7 +46,7 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
     basisSize : int
         PCE basis size
     """
-    def __init__(self, inputProcessSample, outputSample, blockIndices=None, threshold=1e-3, sparse=True, factory=KarhunenLoeveCoefficientsDistributionFactory(), basisSize=100):
+    def __init__(self, inputProcessSample, outputSample, blockIndices=None, threshold=1e-3, sparse=True, factory=KLCoefficientsDistributionFactory(), basisSize=100):
         if inputProcessSample.getSize() != outputSample.getSize():
             raise ValueError("input/output sample must have the same size")
         self.inputProcessSample_ = inputProcessSample
@@ -158,4 +158,4 @@ class FieldToPointKarhunenLoeveFunctionalChaosAlgorithm:
         for j in range(outputDimension):
             residuals[j] = m.sqrt(residuals[j]) / size
         
-        self.result_ = FieldToPointKarhunenLoeveFunctionalChaosResult(klResultCollection, fcaResult, self.inputProcessSample_, self.outputSample_, self.blockIndices_, metamodel, residuals)
+        self.result_ = FieldToPointKLFCEResult(klResultCollection, fcaResult, self.inputProcessSample_, self.outputSample_, self.blockIndices_, metamodel, residuals)

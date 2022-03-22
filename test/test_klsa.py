@@ -19,7 +19,7 @@ def footer(t0):
 
 
 def test_klcoefdf():
-    factory = KarhunenLoeveCoefficientsDistributionFactory()
+    factory = KLCoefficientsDistributionFactory()
     N = 1000
 
     x = ot.Normal(3).getSample(N)
@@ -92,14 +92,14 @@ def test_klfce(process_data):
     dimension = x.getDimension()
     degree = 2
     basisSize = m.comb(dimension + degree, dimension)
-    algo = FieldToPointKarhunenLoeveFunctionalChaosAlgorithm(x, y, basisSize=basisSize)
+    algo = FieldToPointKLFCEAlgorithm(x, y, basisSize=basisSize)
     algo.run()
     result = algo.getResult()
     metamodel = result.getMetaModel()
     residuals = result.getResiduals()
     print('residuals=', residuals)
     #assert ot.Point(residuals).norm() < 1e-3, "residual too big"
-    sensitivity = FieldToPointKarhunenLoeveFunctionalChaosSobolIndices(result)
+    sensitivity = FieldToPointKLFCESobolIndices(result)
     for j in range(y.getDimension()):
         for i in range(x.getDimension()):
             print(f"index({i}, {j}) = {sensitivity.getSobolIndex(i, j)}")
@@ -108,14 +108,14 @@ def test_klfce(process_data):
 
     # now with block indices
     blockIndices = [[0], [1, 2]]
-    algo = FieldToPointKarhunenLoeveFunctionalChaosAlgorithm(x, y, blockIndices)
+    algo = FieldToPointKLFCEAlgorithm(x, y, blockIndices)
     algo.run()
     result = algo.getResult()
     metamodel = result.getMetaModel()
     residuals = result.getResiduals()
     print('residuals=', residuals)
     #assert ot.Point(residuals).norm() < 1e-3, "residual too big"
-    sensitivity = FieldToPointKarhunenLoeveFunctionalChaosSobolIndices(result)
+    sensitivity = FieldToPointKLFCESobolIndices(result)
     for j in range(y.getDimension()):
         for i in range(len(blockIndices)):
             print(f"index({i}, {j}) = {sensitivity.getSobolIndex(i, j)}")
