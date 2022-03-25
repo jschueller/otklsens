@@ -89,10 +89,9 @@ def test_klfce(process_data):
     # Verbosity
     ot.Log.Show(ot.Log.INFO)
     #Log.Show(Log.NONE)
-    dimension = x.getDimension()
     degree = 2
-    basisSize = m.comb(dimension + degree, dimension)
-    algo = FieldToPointKLFCEAlgorithm(x, y, basisSize=basisSize)
+    basisSize = x.getSize()
+    algo = FieldToPointKLFCEAlgorithm(x, y, basisSize=basisSize, threshold=5e-2, recompress=True)
     algo.run()
     result = algo.getResult()
     metamodel = result.getMetaModel()
@@ -108,7 +107,10 @@ def test_klfce(process_data):
 
     # now with block indices
     blockIndices = [[0], [1, 2]]
-    algo = FieldToPointKLFCEAlgorithm(x, y, blockIndices)
+    #dimension = 16
+    #basisSize = m.comb(dimension + degree, dimension)
+    #print('basisSize=', basisSize)
+    algo = FieldToPointKLFCEAlgorithm(x, y, basisSize=basisSize, threshold=5e-2, recompress=False, blockIndices=blockIndices)
     algo.run()
     result = algo.getResult()
     metamodel = result.getMetaModel()

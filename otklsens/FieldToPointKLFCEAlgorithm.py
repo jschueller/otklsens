@@ -37,16 +37,22 @@ class FieldToPointKLFCEAlgorithm:
         Input sample
     outputSample : 2-d sequence of float
         Output sample
-    threshold : float, default=1e-3
-        SVD decomposition eigenvalue threshold
+    threshold : float, default=0.0
+        KL decomposition spectrum cut-off threshold
+        Both for input blocs decomposition and recompression if enabled
+    nbModes : int, default=+inf
+        Maximum number of KL modes
+        Both for input blocs decomposition and recompression if enabled
     sparse : bool, default=True
         Whether to perform sparse or full FCE
     factory : :class:`openturns.DistributionFactory`
-        Factory for the PCE on projected input process sample
+        Multivariate factory for the PCE on projected input process sample
     basisSize : int
         PCE basis size
+    recompress : bool, default=False
+        Whether to eliminate more modes in the global list
     """
-    def __init__(self, inputProcessSample, outputSample, blockIndices=None, threshold=1e-3, sparse=True, factory=KLCoefficientsDistributionFactory(), basisSize=100):
+    def __init__(self, inputProcessSample, outputSample, blockIndices=None, threshold=0.0, nbModes=2**30, sparse=True, factory=KLCoefficientsDistributionFactory(), basisSize=100, recompress=False):
         if inputProcessSample.getSize() != outputSample.getSize():
             raise ValueError("input/output sample must have the same size")
         self.inputProcessSample_ = inputProcessSample
@@ -61,11 +67,13 @@ class FieldToPointKLFCEAlgorithm:
         if flat.getSize() != inputDimension or not flat.check(inputDimension):
             raise ValueError("invalid block indices")
         self.threshold_ = threshold
+        self.nbModes_ = nbModes
         self.sparse_ = sparse
         self.result_ = None
         self.anisotropic_ = False
         self.factory_ = factory
         self.basisSize_ = basisSize
+        self.recompress_ = recompress
 
     def setSparse(sparse):
         self.sparse_ = sparse
@@ -122,23 +130,67 @@ class FieldToPointKLFCEAlgorithm:
         inputDimension = self.inputProcessSample_.getDimension()
         size = self.inputProcessSample_.getSize()
         klResultCollection = []
-        projectionCollection = []
-        inputSample = ot.Sample(size, 0)
+        allEv = ot.Point()
         for i in range(len(self.blockIndices_)):
             inputProcessSample_i = self.inputProcessSample_.getMarginal(self.blockIndices_[i])
             centered = True
             algo = ot.KarhunenLoeveSVDAlgorithm(inputProcessSample_i, self.threshold_, centered)
+            algo.setNbModes(self.nbModes_)
             algo.run()
             klResult_i = algo.getResult()
-            projection_i = ot.KarhunenLoeveProjection(klResult_i)
-            projectionCollection.append(projection_i)
-            inputSample.stack(projection_i(inputProcessSample_i))
+            allEv.add(klResult_i.getEigenvalues())
             klResultCollection.append(klResult_i)
             ot.Log.Info(f"block#{i}={self.blockIndices_[i]} ev={klResult_i.getEigenvalues()}")
 
-        # input process sample projection (+ reorder by blocks)
+        if self.recompress_:
+            sumEv = allEv.norm1()
+            listEv = [ev for ev in allEv]
+            listEv.sort(reverse=True)
+            sumPart = 0.0
+            K = 0
+            nbModesMax = min(self.nbModes_, len(listEv))
+            while (K < nbModesMax) and (listEv[K] >= self.threshold_ * sumEv):
+                K += 1
+            lambdaT = listEv[K]
+            ot.Log.Info(f"keep K={K}/{len(listEv)} modes, lambda threshold={lambdaT}")
+            for i in range(len(self.blockIndices_)):
+                ev_i = klResultCollection[i].getEigenvalues()
+                # count number of modes to keep
+                Ki = 0
+                while (Ki < len(ev_i)) and (ev_i[Ki] >= lambdaT):
+                    Ki += 1
+                # keep at least one mode
+                if Ki == 0:
+                    Ki = 1
+                ot.Log.Info(f"i={i} keep Ki={Ki}/{len(ev_i)} modes")
+
+                # keep only Ki first modes and rebuild result
+                klResult_i = klResultCollection[i]
+                selectedEV2 = klResult_i.getEigenvalues()[:Ki]
+                modes2 = ot.FunctionCollection(Ki)
+                for k in range(Ki):
+                    modes2[k] = klResult_i.getModes()[k]
+                modes2 = ot.Basis(modes2)
+                covariance2 = ot.RankMCovarianceModel(selectedEV2, modes2)
+                modesAsProcessSample = klResult_i.getModesAsProcessSample()
+                # TODO use new ProcessSample.erase method
+                modesAsProcessSample2 = ot.ProcessSample(modesAsProcessSample.getMesh(), Ki, modesAsProcessSample.getDimension())
+                for k in range(Ki):
+                    modesAsProcessSample2[k] = modesAsProcessSample[k]
+                projectionMatrix2 = klResult_i.getProjectionMatrix()[:Ki,:]
+                klResultCollection[i] = ot.KarhunenLoeveResult(covariance2, klResult_i.getThreshold(), selectedEV2, modes2, modesAsProcessSample2, projectionMatrix2)
+
+        # the global projection stacks projections of each block of variables
+        projectionCollection = []
+        inputSample = ot.Sample(size, 0)
+        for i in range(len(self.blockIndices_)):
+            projection_i = ot.KarhunenLoeveProjection(klResultCollection[i])
+            projectionCollection.append(projection_i)
+            inputProcessSample_i = self.inputProcessSample_.getMarginal(self.blockIndices_[i])
+            inputSample.stack(projection_i(inputProcessSample_i))
         py2f = StackedFieldToPointFunction(projectionCollection, self.blockIndices_)
         projection = ot.FieldToPointFunction(py2f)
+        ot.Log.Info(f"total K={inputSample.getDimension()} modes")
 
         # build PCE expansion of projected input sample vs output sample
         fceResult = self.computePCE(inputSample, self.outputSample_)

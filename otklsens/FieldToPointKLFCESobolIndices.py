@@ -3,9 +3,12 @@ import math as m
 import itertools
 
 class FieldToPointKLFCESobolIndices:
-    def __init__(self, result):
+    def __init__(self, result, verbose=False):
         self.result_ = result
         kl_sizes = [len(result_i.getEigenvalues()) for result_i in result.getKLResultCollection()]
+        self.verbose_ = verbose
+        if self.verbose_:
+            ot.Log.Info(f"-- FieldToPointKLFCESobolIndices kl_sizes={kl_sizes}")
         self.marginalInputSizes_ = list(itertools.accumulate(kl_sizes))
 
     def getSobolIndex(self, i, j):
@@ -24,11 +27,15 @@ class FieldToPointKLFCESobolIndices:
         if i > 0:
             startInput = self.marginalInputSizes_[i - 1]
         stopInput = self.marginalInputSizes_[i]
+        if self.verbose_:
+            ot.Log.Info(f"-- getSobolIndex i={i} j={j} startInput={startInput} stopInput={stopInput}")
         # Now, select the relevant coefficients
         coefficients = self.result_.getFCEResult().getCoefficients()
         size = coefficients.getSize()
         enumerateFunction = self.result_.getFCEResult().getOrthogonalBasis().getEnumerateFunction()
         coefficientIndices = self.result_.getFCEResult().getIndices()
+        if self.verbose_:
+            ot.Log.Info(f"-- coefficients={coefficients}")
         for coeffIndex in range(size):
             coeff = coefficients[coeffIndex, j]
             # Only non-zero coefficients have to be taken into account
@@ -40,6 +47,8 @@ class FieldToPointKLFCESobolIndices:
                 # multi-indices that contain positive indices in the
                 # correct input range and null indices outside of this range
                 multiIndices = enumerateFunction(coefficientIndices[coeffIndex])
+                if self.verbose_:
+                    ot.Log.Info(f"-- coeffIndex={coeffIndex} multiIndices={multiIndices}")
                 # Check if there is an index before the allowed range
                 isProperSubset = True
                 for k in range(startInput):
