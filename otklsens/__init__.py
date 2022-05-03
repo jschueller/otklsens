@@ -1,3 +1,2 @@
-from .FieldToPointKLFCESobolIndices import *
-from .FieldToPointKLFCEAlgorithm import *
-from .KLCoefficientsDistributionFactory import *
+from .FieldFunctionalChaosSobolIndices import *
+from .FieldToPointFunctionalChaosAlgorithm import *

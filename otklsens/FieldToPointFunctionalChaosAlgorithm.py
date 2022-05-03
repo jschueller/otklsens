@@ -1,9 +1,7 @@
 import openturns as ot
 import math as m
-from .KLCoefficientsDistributionFactory import *
-from .StackedFieldToPointFunction import *
 
-class FieldToPointKLFCEResult:
+class FieldFunctionalChaosResult:
     def __init__(self, klResultCollection, fceResult, inputProcessSample, outputSample, blockIndices, metamodel, residuals):
         self.klResultCollection_ = klResultCollection
         self.fceResult_ = fceResult
@@ -27,7 +25,34 @@ class FieldToPointKLFCEResult:
     def getResiduals(self):
         return self.residuals_
 
-class FieldToPointKLFCEAlgorithm:
+class StackedProjectionFunction(ot.OpenTURNSPythonFieldToPointFunction):
+
+    def __init__(self, coll, blockIndices):
+        outDim = sum([f.getOutputDimension() for f in coll])
+        inDim = sum([f.getInputDimension() for f in coll])
+        inDesc = ot.Description()
+        outDesc = ot.Description()
+        for f in coll:
+            inDesc.add(f.getInputDescription())
+            outDesc.add(f.getOutputDescription())
+        self.blockIndices_ = blockIndices
+        self.coll_ = coll
+        mesh = coll[0].getInputMesh()
+        super(StackedProjectionFunction, self).__init__(mesh, inDim, outDim)
+        self.setInputDescription(inDesc)
+        self.setOutputDescription(outDesc)
+
+    def _exec(self, X):
+        Xs = ot.Sample(X)
+        Y = ot.Point()
+        for i in range(len(self.coll_)):
+            x = Xs.getMarginal(self.blockIndices_[i])
+            f = self.coll_[i]
+            y = f(x)
+            Y.add(y)
+        return Y
+
+class FieldToPointFunctionalChaosAlgorithm:
     """
     KL/FCE-based field->vector metamodel.
 
@@ -52,7 +77,7 @@ class FieldToPointKLFCEAlgorithm:
     recompress : bool, default=False
         Whether to eliminate more modes in the global list
     """
-    def __init__(self, inputProcessSample, outputSample, blockIndices=None, threshold=0.0, nbModes=2**30, sparse=True, factory=KLCoefficientsDistributionFactory(), basisSize=100, recompress=False):
+    def __init__(self, inputProcessSample, outputSample, blockIndices=None, threshold=0.0, nbModes=2**30, sparse=True, basisSize=100, recompress=False):
         if inputProcessSample.getSize() != outputSample.getSize():
             raise ValueError("input/output sample must have the same size")
         self.inputProcessSample_ = inputProcessSample
@@ -71,7 +96,6 @@ class FieldToPointKLFCEAlgorithm:
         self.sparse_ = sparse
         self.result_ = None
         self.anisotropic_ = False
-        self.factory_ = factory
         self.basisSize_ = basisSize
         self.recompress_ = recompress
 
@@ -80,6 +104,35 @@ class FieldToPointKLFCEAlgorithm:
     
     def getResult(self):
         return self.result_
+
+    @staticmethod
+    def BuildDistribution(sample):
+        # try Gaussian with fallback to histogram
+        dimension = sample.getDimension()
+        marginals = [None] * dimension
+        for i in range(dimension):
+            sample_i = sample.getMarginal(i)
+            level = 0.05 # ResourceMap
+            testResult = ot.NormalityTest.CramerVonMisesNormal(sample_i, level)
+            if testResult.getBinaryQualityMeasure():
+                factory = ot.NormalFactory()
+            else:
+                factory = ot.HistogramFactory()
+            marginals[i] = factory.build(sample_i)
+        distribution = ot.ComposedDistribution(marginals)
+
+        # test independence with fallback to beta copula
+        isIndependent = True
+        for j in range(dimension):
+            marginalJ = sample.getMarginal(j)
+            for i in range(j + 1, dimension):
+                level = 0.05 # ResourceMap
+                testResult = ot.HypothesisTest.Spearman(sample.getMarginal(i), marginalJ, level)
+                isIndependent = isIndependent and testResult.getBinaryQualityMeasure()
+        if not isIndependent:
+            betaCopula = ot.EmpiricalBernsteinCopula(sample, sample.getSize())
+            distribution.setCopula(betaCopula)
+        return distribution
 
     def computePCE(self, inSample, outSample):
         # Iterate over the input dimension and for each input dimension within the KL coefficients
@@ -106,7 +159,7 @@ class FieldToPointKLFCEAlgorithm:
             #j0 = j1
         # Build the distribution
         #distribution = ot.ComposedDistribution(coll)
-        distribution = self.factory_.build(inSample)
+        distribution = FieldToPointFunctionalChaosAlgorithm.BuildDistribution(inSample)
         polyColl = [ot.StandardDistributionPolynomialFactory(distribution.getMarginal(i)) for i in range(dimension)]
         # Build the enumerate function
         #if self.anisotropic_:
@@ -188,7 +241,7 @@ class FieldToPointKLFCEAlgorithm:
             projectionCollection.append(projection_i)
             inputProcessSample_i = self.inputProcessSample_.getMarginal(self.blockIndices_[i])
             inputSample.stack(projection_i(inputProcessSample_i))
-        py2f = StackedFieldToPointFunction(projectionCollection, self.blockIndices_)
+        py2f = StackedProjectionFunction(projectionCollection, self.blockIndices_)
         projection = ot.FieldToPointFunction(py2f)
         ot.Log.Info(f"total K={inputSample.getDimension()} modes")
 
@@ -210,4 +263,4 @@ class FieldToPointKLFCEAlgorithm:
         for j in range(outputDimension):
             residuals[j] = m.sqrt(residuals[j]) / size
         
-        self.result_ = FieldToPointKLFCEResult(klResultCollection, fceResult, self.inputProcessSample_, self.outputSample_, self.blockIndices_, metamodel, residuals)
+        self.result_ = FieldFunctionalChaosResult(klResultCollection, fceResult, self.inputProcessSample_, self.outputSample_, self.blockIndices_, metamodel, residuals)

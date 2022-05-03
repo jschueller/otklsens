@@ -2,13 +2,13 @@ import openturns as ot
 import math as m
 import itertools
 
-class FieldToPointKLFCESobolIndices:
+class FieldFunctionalChaosSobolIndices:
     def __init__(self, result, verbose=False):
         self.result_ = result
         kl_sizes = [len(result_i.getEigenvalues()) for result_i in result.getKLResultCollection()]
         self.verbose_ = verbose
         if self.verbose_:
-            ot.Log.Info(f"-- FieldToPointKLFCESobolIndices kl_sizes={kl_sizes}")
+            ot.Log.Info(f"-- FieldFunctionalChaosSobolIndices kl_sizes={kl_sizes}")
         self.marginalInputSizes_ = list(itertools.accumulate(kl_sizes))
 
     def getSobolIndex(self, i, j):

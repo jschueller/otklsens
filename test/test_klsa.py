@@ -19,32 +19,31 @@ def footer(t0):
 
 
 def test_klcoefdf():
-    factory = KLCoefficientsDistributionFactory()
     N = 1000
 
     x = ot.Normal(3).getSample(N)
-    dist = factory.build(x)
+    dist = FieldToPointFunctionalChaosAlgorithm.BuildDistribution(x)
     assert 'Normal' in repr(dist.getMarginal(0))
     assert 'IndependentCopula' in repr(dist.getCopula())
     #assert dist.getMarginal(0).getImplementation().__class__.__name__ == 'Normal'
     #assert dist.getCopula().getImplementation().__class__.__name__ == 'IndependentCopula'
 
     x = ot.Normal([0.0] * 2, ot.CovarianceMatrix([[1.0, 0.8], [0.8, 1.0]])).getSample(N)
-    dist = factory.build(x)
+    dist = FieldToPointFunctionalChaosAlgorithm.BuildDistribution(x)
     assert 'Normal' in repr(dist.getMarginal(0))
     assert 'EmpiricalBernsteinCopula' in repr(dist.getCopula())
     #assert dist.getMarginal(0).getImplementation().__class__.__name__ == 'Normal'
     #assert dist.getCopula().getImplementation().__class__.__name__ == 'EmpiricalBernsteinCopula'
 
     x = ot.ComposedDistribution([ot.TruncatedNormal(0.0,1.0,-2.0,2.0)] * 2).getSample(N)
-    dist = factory.build(x)
+    dist = FieldToPointFunctionalChaosAlgorithm.BuildDistribution(x)
     assert 'Histogram' in repr(dist.getMarginal(0))
     assert 'IndependentCopula' in repr(dist.getCopula())
     #assert dist.getMarginal(0).getImplementation().__class__.__name__ == 'Histogram'
     #assert dist.getCopula().getImplementation().__class__.__name__ == 'IndependentCopula'
     
     x = ot.ComposedDistribution([ot.Uniform()] * 2, ot.GumbelCopula()).getSample(N)
-    dist = factory.build(x)
+    dist = FieldToPointFunctionalChaosAlgorithm.BuildDistribution(x)
     assert 'Histogram' in repr(dist.getMarginal(0))
     assert 'EmpiricalBernsteinCopula' in repr(dist.getCopula())
     #assert dist.getMarginal(0).getImplementation().__class__.__name__ == 'Histogram'
@@ -91,14 +90,14 @@ def test_klfce(process_data):
     #Log.Show(Log.NONE)
     degree = 2
     basisSize = x.getSize()
-    algo = FieldToPointKLFCEAlgorithm(x, y, basisSize=basisSize, threshold=5e-2, recompress=True)
+    algo = FieldToPointFunctionalChaosAlgorithm(x, y, basisSize=basisSize, threshold=5e-2, recompress=True)
     algo.run()
     result = algo.getResult()
     metamodel = result.getMetaModel()
     residuals = result.getResiduals()
     print('residuals=', residuals)
     #assert ot.Point(residuals).norm() < 1e-3, "residual too big"
-    sensitivity = FieldToPointKLFCESobolIndices(result)
+    sensitivity = FieldFunctionalChaosSobolIndices(result)
     for j in range(y.getDimension()):
         for i in range(x.getDimension()):
             print(f"index({i}, {j}) = {sensitivity.getSobolIndex(i, j)}")
@@ -110,14 +109,14 @@ def test_klfce(process_data):
     #dimension = 16
     #basisSize = m.comb(dimension + degree, dimension)
     #print('basisSize=', basisSize)
-    algo = FieldToPointKLFCEAlgorithm(x, y, basisSize=basisSize, threshold=5e-2, recompress=False, blockIndices=blockIndices)
+    algo = FieldToPointFunctionalChaosAlgorithm(x, y, basisSize=basisSize, threshold=5e-2, recompress=False, blockIndices=blockIndices)
     algo.run()
     result = algo.getResult()
     metamodel = result.getMetaModel()
     residuals = result.getResiduals()
     print('residuals=', residuals)
     #assert ot.Point(residuals).norm() < 1e-3, "residual too big"
-    sensitivity = FieldToPointKLFCESobolIndices(result)
+    sensitivity = FieldFunctionalChaosSobolIndices(result)
     for j in range(y.getDimension()):
         for i in range(len(blockIndices)):
             print(f"index({i}, {j}) = {sensitivity.getSobolIndex(i, j)}")
