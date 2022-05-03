@@ -1,29 +1,6 @@
 import openturns as ot
 import math as m
-
-class FieldFunctionalChaosResult:
-    def __init__(self, klResultCollection, fceResult, inputProcessSample, outputSample, blockIndices, metamodel, residuals):
-        self.klResultCollection_ = klResultCollection
-        self.fceResult_ = fceResult
-        self.inputProcessSample_ = inputProcessSample
-        self.outputSample_ = outputSample
-        self.blockIndices_ = blockIndices
-        self.metamodel_ = metamodel
-        self.residuals_ = residuals
-    def getKLResultCollection(self):
-        return self.klResultCollection_
-    def getFCEResult(self):
-        return self.fceResult_
-    def getInputProcessSample(self):
-        return self.inputProcessSample_
-    def getOutputSample(self):
-        return self.outputSample_
-    def getBlockIndices(self):
-        return self.blockIndices_
-    def getMetaModel(self):
-        return self.metamodel_
-    def getResiduals(self):
-        return self.residuals_
+from .FieldFunctionalChaosResult import *
 
 class StackedProjectionFunction(ot.OpenTURNSPythonFieldToPointFunction):
 
@@ -62,46 +39,90 @@ class FieldToPointFunctionalChaosAlgorithm:
         Input sample
     outputSample : 2-d sequence of float
         Output sample
-    threshold : float, default=0.0
-        KL decomposition spectrum cut-off threshold
-        Both for input blocs decomposition and recompression if enabled
-    nbModes : int, default=+inf
-        Maximum number of KL modes
-        Both for input blocs decomposition and recompression if enabled
-    sparse : bool, default=True
-        Whether to perform sparse or full FCE
-    factory : :class:`openturns.DistributionFactory`
-        Multivariate factory for the PCE on projected input process sample
-    basisSize : int
-        PCE basis size
-    recompress : bool, default=False
-        Whether to eliminate more modes in the global list
     """
-    def __init__(self, inputProcessSample, outputSample, blockIndices=None, threshold=0.0, nbModes=2**30, sparse=True, basisSize=100, recompress=False):
+    def __init__(self, inputProcessSample, outputSample):
         if inputProcessSample.getSize() != outputSample.getSize():
             raise ValueError("input/output sample must have the same size")
         self.inputProcessSample_ = inputProcessSample
         self.outputSample_ = outputSample
         inputDimension = inputProcessSample.getDimension()
-        if blockIndices is None:
-            blockIndices = [[j] for j in range(inputDimension)]
-        self.blockIndices_ = blockIndices
+        self.blockIndices_ = [[j] for j in range(inputDimension)]
         flat = ot.Indices()
-        for block in blockIndices:
+        for block in self.blockIndices_:
             flat.add(ot.Indices(block))
         if flat.getSize() != inputDimension or not flat.check(inputDimension):
             raise ValueError("invalid block indices")
-        self.threshold_ = threshold
-        self.nbModes_ = nbModes
-        self.sparse_ = sparse
+        self.threshold_ = 0.0
+        self.nbModes_ = 2**30
+        self.sparse_ = True
         self.result_ = None
         self.anisotropic_ = False
+        self.basisSize_ = 100
+        self.recompress_ = False
+
+    def setThreshold(self, threshold):
+        """
+        KL spectrum cut-off threshold.
+
+        Parameters
+        ----------
+        threshold : float
+            KL decomposition spectrum cut-off threshold
+            Both for input blocs decomposition and recompression if enabled
+        """
+        self.threshold_ = threshold
+
+    def setNbModes(self, nbModes):
+        """
+        KL max modes number.
+
+        Parameters
+        ----------
+        nbModes : int
+            Maximum number of KL modes
+            Both for input blocs decomposition and recompression if enabled
+        """
+        self.nbModes_ = nbModes
+
+    def setBasisSize(self, basisSize):
+        """
+        PCE basis size accessor.
+
+        Parameters
+        ----------
+        basisSize : int
+            PCE basis size
+        """
         self.basisSize_ = basisSize
+
+    def setSparse(self, sparse):
+        """
+        Sparse chaos flag accessor.
+        
+        Parameters
+        ----------
+        sparse : bool
+            Whether to perform sparse or full FCE
+        """
+        self.sparse_ = sparse
+
+    def setRecompress(self, recompress):
+        """
+        Recompression flag accessor.
+        
+        Parameters
+        ----------
+        recompress : bool, default=False
+            Whether to eliminate more modes in the global list
+        """
         self.recompress_ = recompress
 
-    def setSparse(sparse):
-        self.sparse_ = sparse
-    
+    def setBlockIndices(self, blockIndices):
+        """
+        Block indices accessor.
+        """
+        self.blockIndices_ = blockIndices
+
     def getResult(self):
         return self.result_
 
@@ -199,22 +220,21 @@ class FieldToPointFunctionalChaosAlgorithm:
             sumEv = allEv.norm1()
             listEv = [ev for ev in allEv]
             listEv.sort(reverse=True)
-            sumPart = 0.0
-            K = 0
+            sumPart = listEv[0]
+            K = 1
             nbModesMax = min(self.nbModes_, len(listEv))
-            while (K < nbModesMax) and (listEv[K] >= self.threshold_ * sumEv):
+            while (K < nbModesMax) and (sumPart < (1.0 - self.threshold_) * sumEv):
+                sumPart += listEv[K]
                 K += 1
             lambdaT = listEv[K]
             ot.Log.Info(f"keep K={K}/{len(listEv)} modes, lambda threshold={lambdaT}")
+
             for i in range(len(self.blockIndices_)):
                 ev_i = klResultCollection[i].getEigenvalues()
                 # count number of modes to keep
-                Ki = 0
+                Ki = 1
                 while (Ki < len(ev_i)) and (ev_i[Ki] >= lambdaT):
                     Ki += 1
-                # keep at least one mode
-                if Ki == 0:
-                    Ki = 1
                 ot.Log.Info(f"i={i} keep Ki={Ki}/{len(ev_i)} modes")
 
                 # keep only Ki first modes and rebuild result
@@ -263,4 +283,10 @@ class FieldToPointFunctionalChaosAlgorithm:
         for j in range(outputDimension):
             residuals[j] = m.sqrt(residuals[j]) / size
         
-        self.result_ = FieldFunctionalChaosResult(klResultCollection, fceResult, self.inputProcessSample_, self.outputSample_, self.blockIndices_, metamodel, residuals)
+        result = FieldFunctionalChaosResult(klResultCollection, fceResult, [])
+        result.setBlockIndices(self.blockIndices_)
+        result.setInputProcessSample(self.inputProcessSample_)
+        result.setOutputSample(self.outputSample_)
+        result.setMetamodel(metamodel)
+        result.setResiduals(residuals)
+        self.result_ = result

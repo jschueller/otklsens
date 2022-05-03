@@ -5,7 +5,7 @@ import itertools
 class FieldFunctionalChaosSobolIndices:
     def __init__(self, result, verbose=False):
         self.result_ = result
-        kl_sizes = [len(result_i.getEigenvalues()) for result_i in result.getKLResultCollection()]
+        kl_sizes = [len(result_i.getEigenvalues()) for result_i in result.getInputKLResultCollection()]
         self.verbose_ = verbose
         if self.verbose_:
             ot.Log.Info(f"-- FieldFunctionalChaosSobolIndices kl_sizes={kl_sizes}")

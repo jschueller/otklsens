@@ -90,10 +90,13 @@ def test_klfce(process_data):
     #Log.Show(Log.NONE)
     degree = 2
     basisSize = x.getSize()
-    algo = FieldToPointFunctionalChaosAlgorithm(x, y, basisSize=basisSize, threshold=5e-2, recompress=True)
+    algo = FieldToPointFunctionalChaosAlgorithm(x, y)
+    algo.setBasisSize(basisSize)
+    algo.setThreshold(5e-2)
+    algo.setRecompress(True)
     algo.run()
     result = algo.getResult()
-    metamodel = result.getMetaModel()
+    metamodel = result.getFieldToPointMetamodel()
     residuals = result.getResiduals()
     print('residuals=', residuals)
     #assert ot.Point(residuals).norm() < 1e-3, "residual too big"
@@ -109,10 +112,14 @@ def test_klfce(process_data):
     #dimension = 16
     #basisSize = m.comb(dimension + degree, dimension)
     #print('basisSize=', basisSize)
-    algo = FieldToPointFunctionalChaosAlgorithm(x, y, basisSize=basisSize, threshold=5e-2, recompress=False, blockIndices=blockIndices)
+    algo = FieldToPointFunctionalChaosAlgorithm(x, y)
+    algo.setThreshold(5e-2)
+    algo.setBasisSize(basisSize)
+    algo.setRecompress(False)
+    algo.setBlockIndices(blockIndices)
     algo.run()
     result = algo.getResult()
-    metamodel = result.getMetaModel()
+    metamodel = result.getFieldToPointMetamodel()
     residuals = result.getResiduals()
     print('residuals=', residuals)
     #assert ot.Point(residuals).norm() < 1e-3, "residual too big"
